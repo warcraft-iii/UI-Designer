@@ -1,0 +1,63 @@
+.canvas-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-wrapper {
+  position: relative;
+  transition: transform 0.1s ease-out;
+}
+
+.canvas {
+  cursor: default;
+}
+
+.canvas-container.dragging .canvas {
+  cursor: grabbing;
+}
+
+.canvas-frame {
+  transition: border-color 0.2s;
+  user-select: none;
+}
+
+.canvas-frame:hover {
+  border-color: #3498db !important;
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+}
+
+.canvas-controls button {
+  background: #3498db;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.canvas-controls button:hover {
+  background: #2980b9;
+}
+
+.canvas-controls span {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}

@@ -1,0 +1,212 @@
+import React from 'react';
+import { nanoid } from 'nanoid';
+import { useProjectStore } from '../store/projectStore';
+import { useCommandStore } from '../store/commandStore';
+import { CreateFrameCommand } from '../commands/FrameCommands';
+import { FrameType, FrameData, ExportLanguage } from '../types';
+import { saveProject, loadProject, exportCode } from '../utils/fileOperations';
+import { exportProject } from '../utils/codeExport';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { createDefaultAnchors } from '../utils/anchorUtils';
+import './Toolbar.css';
+
+export const Toolbar: React.FC = () => {
+  const { selectedFrameId, project, setProject } = useProjectStore();
+  const { executeCommand, undo, redo, canUndo, canRedo } = useCommandStore();
+  const [currentFilePath, setCurrentFilePath] = React.useState<string | null>(null);
+
+  // 启用键盘快捷键
+  useKeyboardShortcuts(currentFilePath);
+
+  const createFrame = (type: FrameType, name: string) => {
+    const parentId = selectedFrameId || null;
+    const parent = parentId ? project.frames[parentId] : null;
+    
+    const x = 0.1;
+    const y = 0.1;
+    const width = 0.1;
+    const height = 0.1;
+    
+    const newFrame: FrameData = {
+      id: nanoid(),
+      name: name + nanoid(4),
+      type,
+      x,
+      y,
+      width,
+      height,
+      z: parent ? parent.z + 1 : 1,
+      parentId,
+      children: [],
+      tooltip: false,
+      isRelative: false,
+      anchors: createDefaultAnchors(x, y, width, height),
+      diskTexture: '',
+      wc3Texture: '',
+      text: type === FrameType.TEXT_FRAME ? 'Text' : undefined,
+      textScale: 1,
+      textColor: '#FFFFFF',
+      horAlign: 'left',
+      verAlign: 'start',
+    };
+
+    const command = new CreateFrameCommand(newFrame);
+    executeCommand(command);
+  };
+
+  const handleNewProject = () => {
+    if (confirm('创建新项目将清除当前项目，是否继续？')) {
+      setProject({
+        libraryName: 'UILib',
+        originMode: 'gameui',
+        hideGameUI: false,
+        hideHeroBar: false,
+        hideMiniMap: false,
+        hideResources: false,
+        hideButtonBar: false,
+        hidePortrait: false,
+        hideChat: false,
+        appInterface: '',
+        frames: {},
+        rootFrameIds: [],
+        tableArrays: [],
+        circleArrays: [],
+      });
+      setCurrentFilePath(null);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const path = await saveProject(project, currentFilePath || undefined);
+      if (path) {
+        setCurrentFilePath(path);
+        alert('项目保存成功！');
+      }
+    } catch (error) {
+      alert('保存失败: ' + error);
+    }
+  };
+
+  const handleSaveAs = async () => {
+    try {
+      const path = await saveProject(project);
+      if (path) {
+        setCurrentFilePath(path);
+        alert('项目保存成功！');
+      }
+    } catch (error) {
+      alert('保存失败: ' + error);
+    }
+  };
+
+  const handleLoad = async () => {
+    try {
+      const result = await loadProject();
+      if (result) {
+        setProject(result.project);
+        setCurrentFilePath(result.path);
+        alert('项目加载成功！');
+      }
+    } catch (error) {
+      alert('加载失败: ' + error);
+    }
+  };
+
+  const handleExport = async (language: ExportLanguage) => {
+    try {
+      const code = exportProject(project, language);
+      const path = await exportCode(code, language);
+      if (path) {
+        alert(`代码导出成功！\n路径: ${path}`);
+      }
+    } catch (error) {
+      alert('导出失败: ' + error);
+    }
+  };
+
+  return (
+    <div className="toolbar">
+      {/* 文件操作 */}
+      <div className="toolbar-group">
+        <button className="toolbar-btn" onClick={handleNewProject} title="新建">
+          <span>📄</span> 新建
+        </button>
+        <button className="toolbar-btn" onClick={handleLoad} title="打开">
+          <span>📂</span> 打开
+        </button>
+        <button className="toolbar-btn" onClick={handleSave} disabled={!currentFilePath} title="保存">
+          <span>💾</span> 保存
+        </button>
+        <button className="toolbar-btn" onClick={handleSaveAs} title="另存为">
+          <span>💾</span> 另存为
+        </button>
+      </div>
+
+      {/* 编辑操作 */}
+      <div className="toolbar-group">
+        <button 
+          className="toolbar-btn" 
+          onClick={undo}
+          disabled={!canUndo()}
+          title="撤销 (Ctrl+Z)"
+        >
+          <span>↶</span> 撤销
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={redo}
+          disabled={!canRedo()}
+          title="重做 (Ctrl+Y)"
+        >
+          <span>↷</span> 重做
+        </button>
+      </div>
+
+      {/* 插入元素 */}
+      <div className="toolbar-group">
+        <button 
+          className="toolbar-btn"
+          onClick={() => createFrame(FrameType.BACKDROP, 'Backdrop')}
+          title="插入Backdrop"
+        >
+          <span>▭</span> Backdrop
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => createFrame(FrameType.BUTTON, 'Button')}
+          title="插入Button"
+        >
+          <span>🔘</span> Button
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => createFrame(FrameType.TEXT_FRAME, 'Text')}
+          title="插入Text"
+        >
+          <span>T</span> Text
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => createFrame(FrameType.CHECKBOX, 'Checkbox')}
+          title="插入Checkbox"
+        >
+          <span>☑</span> Checkbox
+        </button>
+      </div>
+
+      {/* 导出 */}
+      <div className="toolbar-group">
+        <button className="toolbar-btn" onClick={() => handleExport('jass')} title="导出为 JASS">
+          <span>📤</span> JASS
+        </button>
+        <button className="toolbar-btn" onClick={() => handleExport('lua')} title="导出为 Lua">
+          <span>📤</span> Lua
+        </button>
+        <button className="toolbar-btn" onClick={() => handleExport('ts')} title="导出为 TypeScript">
+          <span>📤</span> TS
+        </button>
+      </div>
+    </div>
+  );
+};

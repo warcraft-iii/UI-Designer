@@ -1,0 +1,115 @@
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
+import { ProjectData, FrameData } from '../types';
+import { createDefaultAnchors } from './anchorUtils';
+
+// 数据迁移: 将旧版本的单锚点数据转换为锚点数组
+function migrateProjectData(project: ProjectData): ProjectData {
+  const migratedFrames: Record<string, FrameData> = {};
+  
+  for (const [id, frame] of Object.entries(project.frames)) {
+    // 如果frame没有anchors字段,从x/y/width/height创建默认锚点
+    if (!frame.anchors || frame.anchors.length === 0) {
+      migratedFrames[id] = {
+        ...frame,
+        anchors: createDefaultAnchors(frame.x, frame.y, frame.width, frame.height)
+      };
+    } else {
+      migratedFrames[id] = frame;
+    }
+  }
+  
+  return {
+    ...project,
+    frames: migratedFrames
+  };
+}
+
+// 保存项目到文件
+export async function saveProject(project: ProjectData, filePath?: string): Promise<string | null> {
+  try {
+    let path: string | null = filePath || null;
+    
+    // 如果没有提供路径，打开保存对话框
+    if (!path) {
+      path = await save({
+        filters: [{
+          name: 'WC3 UI Project',
+          extensions: ['w3ui']
+        }],
+        defaultPath: 'myproject.w3ui'
+      });
+    }
+    
+    if (!path) return null; // 用户取消
+    
+    // 序列化项目数据
+    const jsonData = JSON.stringify(project, null, 2);
+    
+    // 写入文件
+    await writeTextFile(path, jsonData);
+    
+    return path;
+  } catch (error) {
+    console.error('保存项目失败:', error);
+    throw error;
+  }
+}
+
+// 从文件加载项目
+export async function loadProject(): Promise<{ project: ProjectData; path: string } | null> {
+  try {
+    // 打开文件对话框
+    const path = await open({
+      filters: [{
+        name: 'WC3 UI Project',
+        extensions: ['w3ui']
+      }],
+      multiple: false
+    });
+    
+    if (!path || Array.isArray(path)) return null; // 用户取消或选择了多个文件
+    
+    // 读取文件内容
+    const jsonData = await readTextFile(path);
+    
+    // 解析 JSON
+    let project = JSON.parse(jsonData) as ProjectData;
+    
+    // 数据迁移: 将旧版本数据转换为新版本
+    project = migrateProjectData(project);
+    
+    return { project, path };
+  } catch (error) {
+    console.error('加载项目失败:', error);
+    throw error;
+  }
+}
+
+// 导出代码到文件
+export async function exportCode(code: string, language: 'jass' | 'lua' | 'ts'): Promise<string | null> {
+  try {
+    const extensions: Record<string, string[]> = {
+      jass: ['j'],
+      lua: ['lua'],
+      ts: ['ts']
+    };
+    
+    const path = await save({
+      filters: [{
+        name: `${language.toUpperCase()} File`,
+        extensions: extensions[language]
+      }],
+      defaultPath: `ui_export.${extensions[language][0]}`
+    });
+    
+    if (!path) return null;
+    
+    await writeTextFile(path, code);
+    
+    return path;
+  } catch (error) {
+    console.error('导出代码失败:', error);
+    throw error;
+  }
+}
