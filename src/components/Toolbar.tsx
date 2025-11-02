@@ -6,6 +6,7 @@ import { CreateFrameCommand } from '../commands/FrameCommands';
 import { AlignCommand, DistributeCommand, EqualSpacingCommand } from '../commands/AlignCommands';
 import { UnifySizeCommand } from '../commands/SizeCommands';
 import { ZIndexCommand } from '../commands/ZIndexCommands';
+import { AlignToCanvasCommand } from '../commands/AlignToCanvasCommands';
 import { FrameType, FrameData, ExportLanguage } from '../types';
 import { saveProject, loadProject, exportCode } from '../utils/fileOperations';
 import { exportProject } from '../utils/codeExport';
@@ -335,6 +336,58 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
           title="置底"
         >
           <span>⬇</span> 置底
+        </button>
+      </div>
+
+      {/* 对齐到画布 */}
+      <div className="toolbar-group">
+        <button 
+          className="toolbar-btn"
+          onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'left'))}
+          disabled={!selectedFrameId}
+          title="对齐到画布左边"
+        >
+          <span>⊣</span> 画布左
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'centerH'))}
+          disabled={!selectedFrameId}
+          title="对齐到画布水平中心"
+        >
+          <span>⊟</span> 画布中H
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'right'))}
+          disabled={!selectedFrameId}
+          title="对齐到画布右边"
+        >
+          <span>⊢</span> 画布右
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'top'))}
+          disabled={!selectedFrameId}
+          title="对齐到画布顶部"
+        >
+          <span>⊤</span> 画布顶
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'centerV'))}
+          disabled={!selectedFrameId}
+          title="对齐到画布垂直中心"
+        >
+          <span>⊞</span> 画布中V
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'bottom'))}
+          disabled={!selectedFrameId}
+          title="对齐到画布底部"
+        >
+          <span>⊥</span> 画布底
         </button>
       </div>
 

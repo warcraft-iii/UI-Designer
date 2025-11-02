@@ -43,6 +43,9 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   const [boxSelectStart, setBoxSelectStart] = React.useState({ x: 0, y: 0 });
   const [boxSelectEnd, setBoxSelectEnd] = React.useState({ x: 0, y: 0 });
 
+  // 网格显示状态
+  const [showGrid, setShowGrid] = React.useState(true);
+
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
     setScale: (newScale: number) => setScale(newScale),
@@ -607,6 +610,70 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
               pointerEvents: 'none',
             }}
           />
+
+          {/* 网格线 */}
+          {showGrid && (
+            <svg
+              style={{
+                position: 'absolute',
+                left: `${MARGIN}px`,
+                top: 0,
+                width: `${CANVAS_WIDTH - 2 * MARGIN}px`,
+                height: `${CANVAS_HEIGHT}px`,
+                pointerEvents: 'none',
+              }}
+            >
+              {/* 垂直网格线 - 每0.05单位（相当于画布宽度的6.25%） */}
+              {Array.from({ length: 16 }, (_, i) => i + 1).map(i => {
+                const x = ((i * 0.05) / 0.8) * (CANVAS_WIDTH - 2 * MARGIN);
+                return (
+                  <line
+                    key={`v-${i}`}
+                    x1={x}
+                    y1={0}
+                    x2={x}
+                    y2={CANVAS_HEIGHT}
+                    stroke="rgba(100, 100, 100, 0.3)"
+                    strokeWidth={i % 2 === 0 ? 1 : 0.5}
+                  />
+                );
+              })}
+              {/* 水平网格线 - 每0.05单位 */}
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(i => {
+                const y = CANVAS_HEIGHT - ((i * 0.05) / 0.6) * CANVAS_HEIGHT;
+                return (
+                  <line
+                    key={`h-${i}`}
+                    x1={0}
+                    y1={y}
+                    x2={CANVAS_WIDTH - 2 * MARGIN}
+                    y2={y}
+                    stroke="rgba(100, 100, 100, 0.3)"
+                    strokeWidth={i % 2 === 0 ? 1 : 0.5}
+                  />
+                );
+              })}
+              {/* 中心十字线 */}
+              <line
+                x1={(0.4 / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}
+                y1={0}
+                x2={(0.4 / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}
+                y2={CANVAS_HEIGHT}
+                stroke="rgba(0, 255, 0, 0.4)"
+                strokeWidth={1}
+                strokeDasharray="5,5"
+              />
+              <line
+                x1={0}
+                y1={CANVAS_HEIGHT - (0.3 / 0.6) * CANVAS_HEIGHT}
+                x2={CANVAS_WIDTH - 2 * MARGIN}
+                y2={CANVAS_HEIGHT - (0.3 / 0.6) * CANVAS_HEIGHT}
+                stroke="rgba(0, 255, 0, 0.4)"
+                strokeWidth={1}
+                strokeDasharray="5,5"
+              />
+            </svg>
+          )}
           
           {/* 渲染所有Frame（包括子控件），子控件也在画布根部独立渲染 */}
           {getAllFrameIds(project.rootFrameIds).map(frameId => renderFrame(frameId))}
@@ -636,6 +703,13 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         <span>{Math.round(scale * 100)}%</span>
         <button onClick={() => setScale(prev => Math.max(0.1, prev * 0.8))}>-</button>
         <button onClick={() => { setScale(1); setOffset({ x: 0, y: 0 }); }}>重置</button>
+        <button 
+          onClick={() => setShowGrid(!showGrid)}
+          style={{ marginLeft: '10px', backgroundColor: showGrid ? '#4CAF50' : undefined }}
+          title="切换网格显示"
+        >
+          {showGrid ? '🟩' : '⬜'} 网格
+        </button>
       </div>
     </div>
   );
