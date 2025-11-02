@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
-import { RemoveFrameCommand, UpdateFrameCommand } from '../commands/FrameCommands';
+import { RemoveFrameCommand, UpdateFrameCommand, CopyFrameCommand, PasteFrameCommand } from '../commands/FrameCommands';
 import { DuplicateFrameCommand } from '../commands/DuplicateFrameCommand';
 import { saveProject, loadProject, exportCode } from '../utils/fileOperations';
 import { exportProject } from '../utils/codeExport';
@@ -44,6 +44,14 @@ export const useKeyboardShortcuts = (
           case 'y':
             e.preventDefault();
             if (canRedo()) redo();
+            break;
+          case 'c':
+            e.preventDefault();
+            handleCopy();
+            break;
+          case 'v':
+            e.preventDefault();
+            handlePaste();
             break;
           case 'd':
             e.preventDefault();
@@ -241,6 +249,19 @@ export const useKeyboardShortcuts = (
         executeCommand(new DuplicateFrameCommand(selectedFrameId));
         console.log('✅ 控件已复制');
       }
+    };
+
+    const handleCopy = () => {
+      if (selectedFrameId) {
+        executeCommand(new CopyFrameCommand(selectedFrameId));
+        console.log('✅ 已复制到剪贴板');
+      }
+    };
+
+    const handlePaste = () => {
+      // 粘贴到当前位置，稍微偏移
+      executeCommand(new PasteFrameCommand(0.02, 0.02));
+      console.log('✅ 已粘贴');
     };
 
     const copyToClipboard = async (language: 'jass' | 'lua' | 'ts') => {

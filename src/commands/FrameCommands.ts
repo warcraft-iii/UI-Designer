@@ -163,3 +163,107 @@ export class ChangeParentCommand implements Command {
     this.execute();
   }
 }
+
+// 复制Frame命令
+export class CopyFrameCommand implements Command {
+  private frameId: string;
+
+  constructor(frameId: string) {
+    this.frameId = frameId;
+  }
+
+  execute(): void {
+    const store = useProjectStore.getState();
+    store.copyToClipboard(this.frameId);
+  }
+
+  undo(): void {
+    // 复制操作不需要撤销
+  }
+
+  redo(): void {
+    this.execute();
+  }
+}
+
+// 粘贴Frame命令
+export class PasteFrameCommand implements Command {
+  private pastedFrameIds: string[] = [];
+  private previousSelection: string | null;
+  private offsetX: number;
+  private offsetY: number;
+
+  constructor(offsetX: number = 0.01, offsetY: number = 0.01) {
+    this.offsetX = offsetX;
+    this.offsetY = offsetY;
+    this.previousSelection = useProjectStore.getState().selectedFrameId;
+  }
+
+  execute(): void {
+    const store = useProjectStore.getState();
+    const clipboard = store.clipboard;
+    
+    if (!clipboard) {
+      console.warn('[PasteCommand] Nothing in clipboard');
+      return;
+    }
+
+    // 递归粘贴控件及其子控件
+    const pasteFrameRecursive = (
+      sourceFrame: any, // clipboard 中存储的是完整的子控件数据
+      parentId: string | null,
+      isRoot: boolean = true
+    ): string => {
+      // 生成新ID
+      const newId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // 创建新控件数据
+      const newFrame: FrameData = {
+        ...sourceFrame,
+        id: newId,
+        name: `${sourceFrame.name}_副本`,
+        parentId,
+        // 偏移位置（只对根控件偏移）
+        x: isRoot ? sourceFrame.x + this.offsetX : sourceFrame.x,
+        y: isRoot ? sourceFrame.y + this.offsetY : sourceFrame.y,
+        children: [], // 先创建空的children数组
+      };
+
+      // 添加新控件
+      store.addFrame(newFrame);
+      this.pastedFrameIds.push(newId);
+
+      // 递归粘贴子控件
+      if (sourceFrame.children && Array.isArray(sourceFrame.children)) {
+        sourceFrame.children.forEach((childFrame: any) => {
+          if (childFrame && typeof childFrame === 'object') {
+            pasteFrameRecursive(childFrame, newId, false);
+          }
+        });
+      }
+
+      return newId;
+    };
+
+    // 执行粘贴
+    const newRootId = pasteFrameRecursive(clipboard, clipboard.parentId, true);
+    
+    // 选中新粘贴的控件
+    store.selectFrame(newRootId);
+    
+    console.log('[PasteCommand] Pasted frames:', this.pastedFrameIds);
+  }
+
+  undo(): void {
+    const store = useProjectStore.getState();
+    // 删除所有粘贴的控件（从后向前删除，确保先删除子控件）
+    [...this.pastedFrameIds].reverse().forEach(id => {
+      store.removeFrame(id);
+    });
+    store.selectFrame(this.previousSelection);
+  }
+
+  redo(): void {
+    this.execute();
+  }
+}

@@ -5,6 +5,7 @@ import { createDefaultAnchors } from '../utils/anchorUtils';
 interface ProjectState {
   project: ProjectData;
   selectedFrameId: string | null;
+  clipboard: FrameData | null; // 剪贴板，存储被复制的控件
   
   // 项目操作
   setProject: (project: ProjectData) => void;
@@ -19,6 +20,9 @@ interface ProjectState {
   
   // 选择操作
   selectFrame: (id: string | null) => void;
+  
+  // 剪贴板操作
+  copyToClipboard: (frameId: string) => void;
   
   // 通用设置
   updateGeneralSettings: (settings: Partial<Pick<ProjectData, 'libraryName' | 'originMode' | 'backgroundImage' | 'hideGameUI' | 'hideHeroBar' | 'hideMiniMap' | 'hideResources' | 'hideButtonBar' | 'hidePortrait' | 'hideChat'>>) => void;
@@ -53,6 +57,7 @@ const createDefaultProject = (): ProjectData => ({
 export const useProjectStore = create<ProjectState>((set, get) => ({
   project: createDefaultProject(),
   selectedFrameId: null,
+  clipboard: null,
 
   setProject: (project) => {
     // 修复所有控件的锚点和children字段
@@ -226,6 +231,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   getFrame: (id) => get().project.frames[id],
 
   selectFrame: (id) => set({ selectedFrameId: id }),
+
+  copyToClipboard: (frameId) => {
+    const state = get();
+    const frame = state.project.frames[frameId];
+    if (!frame) return;
+    
+    // 深拷贝控件数据（包括所有子控件）
+    const cloneFrameRecursive = (frame: FrameData): FrameData => {
+      return {
+        ...frame,
+        children: frame.children.map(childId => {
+          const childFrame = state.project.frames[childId];
+          return childFrame ? cloneFrameRecursive(childFrame) : null;
+        }).filter(Boolean) as any[], // 暂时存储子控件的完整数据
+      };
+    };
+    
+    const clonedFrame = cloneFrameRecursive(frame);
+    set({ clipboard: clonedFrame });
+    console.log('[Store] Copied to clipboard:', clonedFrame.name);
+  },
 
   updateGeneralSettings: (settings) => set((state) => ({
     project: {
