@@ -5,6 +5,7 @@ import { createDefaultAnchors } from '../utils/anchorUtils';
 interface ProjectState {
   project: ProjectData;
   selectedFrameId: string | null;
+  selectedFrameIds: string[]; // 多选支持
   clipboard: FrameData | null; // 剪贴板，存储被复制的控件
   
   // 项目操作
@@ -20,6 +21,9 @@ interface ProjectState {
   
   // 选择操作
   selectFrame: (id: string | null) => void;
+  toggleSelectFrame: (id: string) => void; // Ctrl+点击切换选择
+  selectMultipleFrames: (ids: string[]) => void; // 框选多个
+  clearSelection: () => void;
   
   // 剪贴板操作
   copyToClipboard: (frameId: string) => void;
@@ -57,6 +61,7 @@ const createDefaultProject = (): ProjectData => ({
 export const useProjectStore = create<ProjectState>((set, get) => ({
   project: createDefaultProject(),
   selectedFrameId: null,
+  selectedFrameIds: [],
   clipboard: null,
 
   setProject: (project) => {
@@ -230,7 +235,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   getFrame: (id) => get().project.frames[id],
 
-  selectFrame: (id) => set({ selectedFrameId: id }),
+  selectFrame: (id) => set({ 
+    selectedFrameId: id,
+    selectedFrameIds: id ? [id] : []
+  }),
+
+  toggleSelectFrame: (id) => set((state) => {
+    const isSelected = state.selectedFrameIds.includes(id);
+    const newSelectedIds = isSelected
+      ? state.selectedFrameIds.filter(fid => fid !== id)
+      : [...state.selectedFrameIds, id];
+    
+    return {
+      selectedFrameIds: newSelectedIds,
+      selectedFrameId: newSelectedIds.length > 0 ? newSelectedIds[newSelectedIds.length - 1] : null
+    };
+  }),
+
+  selectMultipleFrames: (ids) => set({
+    selectedFrameIds: ids,
+    selectedFrameId: ids.length > 0 ? ids[ids.length - 1] : null
+  }),
+
+  clearSelection: () => set({
+    selectedFrameId: null,
+    selectedFrameIds: []
+  }),
 
   copyToClipboard: (frameId) => {
     const state = get();

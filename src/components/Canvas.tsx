@@ -17,7 +17,7 @@ export interface CanvasHandle {
 }
 
 export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
-  const { project, selectedFrameId, selectFrame, setProject } = useProjectStore();
+  const { project, selectedFrameId, selectFrame, toggleSelectFrame, setProject } = useProjectStore();
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(1);
   const [offset, setOffset] = React.useState({ x: 0, y: 0 });
@@ -347,7 +347,8 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     const frame = project.frames[frameId];
     if (!frame) return null;
 
-    const isSelected = frameId === selectedFrameId;
+    const store = useProjectStore.getState();
+    const isSelected = store.selectedFrameIds.includes(frameId);
     
     // 检查是否使用相对锚点，如果是则重新计算位置
     const calculatedPos = calculatePositionFromAnchors(frame, project.frames);
@@ -392,12 +393,21 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         key={frameId}
         className="canvas-frame"
         style={style}
-        onMouseDown={(e) => handleFrameMouseDown(e, frameId)}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (!isDraggingFrame && !isResizing) {
-            selectFrame(frameId);
+        onMouseDown={(e) => {
+          // 先处理选择逻辑（在拖拽开始之前）
+          if (e.button === 0) { // 只处理左键
+            if (e.ctrlKey || e.metaKey) {
+              toggleSelectFrame(frameId);
+              e.stopPropagation();
+              return; // Ctrl+点击时不启动拖拽
+            } else {
+              selectFrame(frameId);
+            }
           }
+          handleFrameMouseDown(e, frameId);
+        }}
+        onClick={(e) => {
+          e.stopPropagation(); // 阻止事件冒泡到画布
         }}
         title={frame.name}
       >
@@ -473,7 +483,15 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
             backgroundSize: project.backgroundImage ? 'cover' : '20px 20px',
             backgroundColor: '#1a1a1a',
           }}
-          onClick={() => selectFrame(null)}
+          onMouseDown={(e) => {
+            // 只在非 Ctrl 左键点击时清空选择
+            if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+              selectFrame(null);
+            }
+          }}
+          onClick={() => {
+            // onClick 不再处理选择逻辑，避免事件顺序问题
+          }}
         >
           {/* 渲染4:3区域边界 */}
           <div 

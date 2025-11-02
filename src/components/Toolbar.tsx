@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
 import { CreateFrameCommand } from '../commands/FrameCommands';
+import { AlignCommand, DistributeCommand } from '../commands/AlignCommands';
 import { FrameType, FrameData, ExportLanguage } from '../types';
 import { saveProject, loadProject, exportCode } from '../utils/fileOperations';
 import { exportProject } from '../utils/codeExport';
@@ -16,7 +17,7 @@ interface ToolbarProps {
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFilePath }) => {
-  const { selectedFrameId, project, setProject } = useProjectStore();
+  const { selectedFrameId, selectedFrameIds, project, setProject } = useProjectStore();
   const { executeCommand, undo, redo, canUndo, canRedo } = useCommandStore();
   const [showShortcutHelp, setShowShortcutHelp] = React.useState(false);
 
@@ -169,6 +170,78 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
           title="重做 (Ctrl+Y)"
         >
           <span>↷</span> 重做
+        </button>
+      </div>
+
+      {/* 对齐工具 */}
+      <div className="toolbar-group">
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'left'))}
+          disabled={selectedFrameIds.length < 2}
+          title="左对齐"
+        >
+          <span>⊣</span> 左对齐
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'centerH'))}
+          disabled={selectedFrameIds.length < 2}
+          title="水平居中"
+        >
+          <span>⊢</span> 居中
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'right'))}
+          disabled={selectedFrameIds.length < 2}
+          title="右对齐"
+        >
+          <span>⊢</span> 右对齐
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'top'))}
+          disabled={selectedFrameIds.length < 2}
+          title="顶部对齐"
+        >
+          <span>⊤</span> 顶对齐
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'centerV'))}
+          disabled={selectedFrameIds.length < 2}
+          title="垂直居中"
+        >
+          <span>⊥</span> 居中
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'bottom'))}
+          disabled={selectedFrameIds.length < 2}
+          title="底部对齐"
+        >
+          <span>⊥</span> 底对齐
+        </button>
+      </div>
+
+      {/* 分布工具 */}
+      <div className="toolbar-group">
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new DistributeCommand(selectedFrameIds, 'horizontal'))}
+          disabled={selectedFrameIds.length < 3}
+          title="水平分布"
+        >
+          <span>↔</span> 水平分布
+        </button>
+        <button 
+          className="toolbar-btn"
+          onClick={() => executeCommand(new DistributeCommand(selectedFrameIds, 'vertical'))}
+          disabled={selectedFrameIds.length < 3}
+          title="垂直分布"
+        >
+          <span>↕</span> 垂直分布
         </button>
       </div>
 
