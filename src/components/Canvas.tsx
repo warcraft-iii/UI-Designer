@@ -384,6 +384,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       alignItems: frame.verAlign === 'start' ? 'flex-start' : frame.verAlign === 'center' ? 'center' : 'flex-end',
       justifyContent: frame.horAlign === 'left' ? 'flex-start' : frame.horAlign === 'center' ? 'center' : 'flex-end',
       fontSize: `${(frame.textScale || 1) * 14}px`,
+      pointerEvents: 'auto',
     };
 
     return (
@@ -401,7 +402,6 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         title={frame.name}
       >
         {frame.text && <span>{frame.text}</span>}
-        {frame.children.map(childId => renderFrame(childId))}
         
         {/* 调整大小手柄 */}
         <ResizeHandles
@@ -410,6 +410,22 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         />
       </div>
     );
+  };
+
+  // 递归获取所有需要渲染的控件ID（包括子控件）
+  const getAllFrameIds = (frameIds: string[]): string[] => {
+    const result: string[] = [];
+    
+    const traverse = (id: string) => {
+      result.push(id);
+      const frame = project.frames[id];
+      if (frame && frame.children) {
+        frame.children.forEach(childId => traverse(childId));
+      }
+    };
+    
+    frameIds.forEach(id => traverse(id));
+    return result;
   };
 
   const getFrameBackgroundColor = (type: FrameType): string => {
@@ -472,8 +488,8 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
             }}
           />
           
-          {/* 渲染所有根Frame */}
-          {project.rootFrameIds.map(frameId => renderFrame(frameId))}
+          {/* 渲染所有Frame（包括子控件），子控件也在画布根部独立渲染 */}
+          {getAllFrameIds(project.rootFrameIds).map(frameId => renderFrame(frameId))}
         </div>
       </div>
 

@@ -148,58 +148,15 @@ export class ChangeParentCommand implements Command {
     
     if (frame) {
       this.oldParentId = frame.parentId;
-      
-      // 从旧父级移除
-      if (this.oldParentId) {
-        const oldParent = store.getFrame(this.oldParentId);
-        if (oldParent) {
-          store.updateFrame(this.oldParentId, {
-            children: oldParent.children.filter(id => id !== this.frameId)
-          });
-        }
-      }
-      
-      // 添加到新父级
-      if (this.newParentId) {
-        const newParent = store.getFrame(this.newParentId);
-        if (newParent) {
-          store.updateFrame(this.newParentId, {
-            children: [...newParent.children, this.frameId]
-          });
-        }
-      }
-      
+      // updateFrame 会自动处理父子关系的更新
       store.updateFrame(this.frameId, { parentId: this.newParentId });
     }
   }
 
   undo(): void {
     const store = useProjectStore.getState();
-    const frame = store.getFrame(this.frameId);
-    
-    if (frame) {
-      // 从当前父级移除
-      if (this.newParentId) {
-        const currentParent = store.getFrame(this.newParentId);
-        if (currentParent) {
-          store.updateFrame(this.newParentId, {
-            children: currentParent.children.filter(id => id !== this.frameId)
-          });
-        }
-      }
-      
-      // 恢复到旧父级
-      if (this.oldParentId) {
-        const oldParent = store.getFrame(this.oldParentId);
-        if (oldParent) {
-          store.updateFrame(this.oldParentId, {
-            children: [...oldParent.children, this.frameId]
-          });
-        }
-      }
-      
-      store.updateFrame(this.frameId, { parentId: this.oldParentId });
-    }
+    // updateFrame 会自动处理父子关系的恢复
+    store.updateFrame(this.frameId, { parentId: this.oldParentId });
   }
 
   redo(): void {

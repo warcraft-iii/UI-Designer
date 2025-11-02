@@ -7,15 +7,35 @@ import { createDefaultAnchors } from './anchorUtils';
 function migrateProjectData(project: ProjectData): ProjectData {
   const migratedFrames: Record<string, FrameData> = {};
   
+  // 第一步：确保所有控件都有必要的字段
   for (const [id, frame] of Object.entries(project.frames)) {
     // 如果frame没有anchors字段,从x/y/width/height创建默认锚点
     if (!frame.anchors || frame.anchors.length === 0) {
       migratedFrames[id] = {
         ...frame,
-        anchors: createDefaultAnchors(frame.x, frame.y, frame.width, frame.height)
+        anchors: createDefaultAnchors(frame.x, frame.y, frame.width, frame.height),
+        children: frame.children || [] // 确保有children字段
       };
     } else {
-      migratedFrames[id] = frame;
+      migratedFrames[id] = {
+        ...frame,
+        children: frame.children || [] // 确保有children字段
+      };
+    }
+  }
+  
+  // 第二步：重建父子关系索引（修复可能损坏的children数组）
+  // 先清空所有children数组
+  for (const frame of Object.values(migratedFrames)) {
+    frame.children = [];
+  }
+  
+  // 根据每个控件的parentId重建父控件的children数组
+  for (const [id, frame] of Object.entries(migratedFrames)) {
+    if (frame.parentId && migratedFrames[frame.parentId]) {
+      if (!migratedFrames[frame.parentId].children.includes(id)) {
+        migratedFrames[frame.parentId].children.push(id);
+      }
     }
   }
   

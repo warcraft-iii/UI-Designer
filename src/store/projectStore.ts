@@ -14,6 +14,7 @@ interface ProjectState {
   addFrame: (frame: FrameData) => void;
   updateFrame: (id: string, updates: Partial<FrameData>) => void;
   removeFrame: (id: string) => void;
+  deleteFrame: (id: string) => void; // 别名，等同于 removeFrame
   getFrame: (id: string) => FrameData | undefined;
   
   // 选择操作
@@ -54,18 +55,39 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   selectedFrameId: null,
 
   setProject: (project) => {
-    // 修复所有控件的锚点
+    // 修复所有控件的锚点和children字段
     const fixedFrames: Record<string, FrameData> = {};
+    
+    // 第一步：确保每个控件都有必要的字段
     Object.entries(project.frames).forEach(([id, frame]) => {
       // 确保每个控件都有锚点数组
       if (!frame.anchors || frame.anchors.length === 0) {
         fixedFrames[id] = {
           ...frame,
-          anchors: createDefaultAnchors(frame.x, frame.y, frame.width, frame.height)
+          anchors: createDefaultAnchors(frame.x, frame.y, frame.width, frame.height),
+          children: frame.children || []
         };
         console.log(`[Store] Fixed missing anchors for frame: ${frame.name}`);
       } else {
-        fixedFrames[id] = frame;
+        fixedFrames[id] = {
+          ...frame,
+          children: frame.children || []
+        };
+      }
+    });
+    
+    // 第二步：重建父子关系索引（修复可能损坏的children数组）
+    // 先清空所有children数组
+    Object.values(fixedFrames).forEach(frame => {
+      frame.children = [];
+    });
+    
+    // 根据每个控件的parentId重建父控件的children数组
+    Object.entries(fixedFrames).forEach(([id, frame]) => {
+      if (frame.parentId && fixedFrames[frame.parentId]) {
+        if (!fixedFrames[frame.parentId].children.includes(id)) {
+          fixedFrames[frame.parentId].children.push(id);
+        }
       }
     });
     
@@ -82,30 +104,82 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     selectedFrameId: null
   }),
 
-  addFrame: (frame) => set((state) => ({
-    project: {
-      ...state.project,
-      frames: {
-        ...state.project.frames,
-        [frame.id]: frame,
+  addFrame: (frame) => set((state) => {
+    const updatedFrames = {
+      ...state.project.frames,
+      [frame.id]: frame,
+    };
+    
+    // 如果有父控件，需要更新父控件的children数组
+    if (frame.parentId && state.project.frames[frame.parentId]) {
+      const parentFrame = state.project.frames[frame.parentId];
+      updatedFrames[frame.parentId] = {
+        ...parentFrame,
+        children: [...parentFrame.children, frame.id],
+      };
+    }
+    
+    return {
+      project: {
+        ...state.project,
+        frames: updatedFrames,
+        rootFrameIds: frame.parentId === null 
+          ? [...state.project.rootFrameIds, frame.id]
+          : state.project.rootFrameIds,
       },
-      rootFrameIds: frame.parentId === null 
-        ? [...state.project.rootFrameIds, frame.id]
-        : state.project.rootFrameIds,
-    },
-  })),
+    };
+  }),
 
   updateFrame: (id, updates) => set((state) => {
     const frame = state.project.frames[id];
     if (!frame) return state;
 
+    const updatedFrames = {
+      ...state.project.frames,
+      [id]: { ...frame, ...updates },
+    };
+
+    // 如果更新了parentId，需要同步更新父子关系
+    if ('parentId' in updates && updates.parentId !== frame.parentId) {
+      const oldParentId = frame.parentId;
+      const newParentId = updates.parentId;
+
+      // 从旧父控件的children中移除
+      if (oldParentId && updatedFrames[oldParentId]) {
+        const oldParent = updatedFrames[oldParentId];
+        updatedFrames[oldParentId] = {
+          ...oldParent,
+          children: oldParent.children.filter(childId => childId !== id),
+        };
+      }
+
+      // 添加到新父控件的children中
+      if (newParentId && updatedFrames[newParentId]) {
+        const newParent = updatedFrames[newParentId];
+        updatedFrames[newParentId] = {
+          ...newParent,
+          children: [...newParent.children, id],
+        };
+      }
+    }
+
+    // 更新rootFrameIds
+    let newRootFrameIds = state.project.rootFrameIds;
+    if ('parentId' in updates) {
+      if (updates.parentId === null && !newRootFrameIds.includes(id)) {
+        // 变为根控件
+        newRootFrameIds = [...newRootFrameIds, id];
+      } else if (updates.parentId !== null && newRootFrameIds.includes(id)) {
+        // 从根控件变为子控件
+        newRootFrameIds = newRootFrameIds.filter(fid => fid !== id);
+      }
+    }
+
     return {
       project: {
         ...state.project,
-        frames: {
-          ...state.project.frames,
-          [id]: { ...frame, ...updates },
-        },
+        frames: updatedFrames,
+        rootFrameIds: newRootFrameIds,
       },
     };
   }),
@@ -116,7 +190,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     
     if (!frame) return state;
 
-    // 移除子元素的引用
+    // 更新子元素的父级引用
     const updatedFrames = { ...remainingFrames };
     frame.children.forEach(childId => {
       if (updatedFrames[childId]) {
@@ -127,6 +201,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
     });
 
+    // 从父控件的children数组中移除当前控件
+    if (frame.parentId && updatedFrames[frame.parentId]) {
+      const parentFrame = updatedFrames[frame.parentId];
+      updatedFrames[frame.parentId] = {
+        ...parentFrame,
+        children: parentFrame.children.filter(childId => childId !== id),
+      };
+    }
+
     return {
       project: {
         ...state.project,
@@ -136,6 +219,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       selectedFrameId: state.selectedFrameId === id ? null : state.selectedFrameId,
     };
   }),
+
+  // deleteFrame 是 removeFrame 的别名
+  deleteFrame: (id) => get().removeFrame(id),
 
   getFrame: (id) => get().project.frames[id],
 
