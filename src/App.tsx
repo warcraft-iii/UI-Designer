@@ -1,6 +1,7 @@
 import React from 'react';
 import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
+import { MenuBar } from './components/MenuBar';
 import { ProjectTree } from './components/ProjectTree';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { SidePanel } from './components/SidePanel';
@@ -21,6 +22,10 @@ function App() {
 
   return (
     <div className="app">
+      <MenuBar 
+        currentFilePath={currentFilePath} 
+        setCurrentFilePath={setCurrentFilePath}
+      />
       <Toolbar currentFilePath={currentFilePath} setCurrentFilePath={setCurrentFilePath} />
       <div className="app-content">
         <ProjectTree />
