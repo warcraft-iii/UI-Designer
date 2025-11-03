@@ -50,8 +50,8 @@ html, body, #root {
   flex: 0 0 300px;
 }
 
-/* 模板面板 - 动态宽度 */
-.app-content > .template-panel {
+/* 侧边面板 - 动态宽度 */
+.app-content > .side-panel {
   flex: 0 0 auto;
 }
 

@@ -2,9 +2,10 @@ import React, { forwardRef, useImperativeHandle } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
 import { UpdateFrameCommand } from '../commands/FrameCommands';
-import { FrameType } from '../types';
+import { FrameType, FramePoint } from '../types';
 import { ResizeHandles, ResizeDirection } from './ResizeHandles';
-import { updateAnchorsFromBounds, calculatePositionFromAnchors } from '../utils/anchorUtils';
+import { updateAnchorsFromBounds, calculatePositionFromAnchors, getAnchorPosition, getAnchorOffsetWc3 } from '../utils/anchorUtils';
+import { AnchorVisualizer } from './AnchorVisualizer';
 import './Canvas.css';
 
 const CANVAS_WIDTH = 1920;
@@ -45,6 +46,19 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
 
   // 网格显示状态
   const [showGrid, setShowGrid] = React.useState(true);
+  
+  // 锚点可视化状态
+  const [showAnchors, setShowAnchors] = React.useState(false);
+  
+  // 网格吸附状态
+  const [snapToGrid, setSnapToGrid] = React.useState(true);
+  const [gridSize, setGridSize] = React.useState(0.01); // WC3单位，默认0.01
+  
+  // 吸附到网格的辅助函数
+  const snapValue = (value: number, gridSize: number): number => {
+    if (!snapToGrid) return value;
+    return Math.round(value / gridSize) * gridSize;
+  };
 
   // 暴露给父组件的方法
   useImperativeHandle(ref, () => ({
@@ -116,32 +130,100 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       const mouseWc3X = ((mouseX - MARGIN) / (CANVAS_WIDTH - 2 * MARGIN)) * 0.8;
       const mouseWc3Y = (mouseY / CANVAS_HEIGHT) * 0.6;
 
-      // 应用拖拽偏移，得到 Frame 的新位置
-      const newX = Math.max(0, Math.min(0.8 - frame.width, mouseWc3X - dragOffset.x));
-      const newY = Math.max(0, Math.min(0.6 - frame.height, mouseWc3Y - dragOffset.y));
+      // 检查是否有相对锚点
+      const hasRelativeAnchors = frame.anchors?.some(a => a.relativeTo);
 
-      // 更新锚点
-      const updatedAnchors = updateAnchorsFromBounds(
-        frame.anchors,
-        newX,
-        newY,
-        frame.width,
-        frame.height
-      );
+      if (hasRelativeAnchors && frame.anchors) {
+        // 有相对锚点：只更新锚点偏移量，保持相对定位
+        let newX = mouseWc3X - dragOffset.x;
+        let newY = mouseWc3Y - dragOffset.y;
 
-      // 直接更新状态，不通过命令系统
-      setProject({
-        ...project,
-        frames: {
-          ...project.frames,
-          [draggedFrameId]: {
-            ...frame,
-            x: newX,
-            y: newY,
-            anchors: updatedAnchors
-          }
+        console.log('[Drag] Mouse WC3:', mouseWc3X.toFixed(3), mouseWc3Y.toFixed(3));
+        console.log('[Drag] Drag offset:', dragOffset.x.toFixed(3), dragOffset.y.toFixed(3));
+        console.log('[Drag] New frame bottom-left position:', newX.toFixed(3), newY.toFixed(3));
+
+        // 网格吸附
+        if (snapToGrid) {
+          newX = snapValue(newX, gridSize);
+          newY = snapValue(newY, gridSize);
         }
-      });
+
+        // 更新每个相对锚点的偏移量
+        const updatedAnchors = frame.anchors.map(anchor => {
+          if (anchor.relativeTo) {
+            const relativeFrame = project.frames[anchor.relativeTo];
+            if (relativeFrame) {
+              const relativePoint = anchor.relativePoint !== undefined ? anchor.relativePoint : FramePoint.TOPLEFT;
+              const relativePos = getAnchorPosition(relativeFrame, relativePoint);
+              
+              // 计算当前锚点在控件上的位置（相对于控件左下角的偏移，WC3坐标系）
+              const anchorOffsetInFrame = getAnchorOffsetWc3(anchor.point, frame.width, frame.height);
+              
+              // 计算锚点的目标绝对位置 = 控件新的左下角位置 + 锚点在控件内的偏移
+              const targetAnchorX = newX + anchorOffsetInFrame.x;
+              const targetAnchorY = newY + anchorOffsetInFrame.y;
+              
+              console.log('[Drag] Anchor', FramePoint[anchor.point], 'offset in frame (WC3):', anchorOffsetInFrame);
+              console.log('[Drag] Target anchor abs pos:', targetAnchorX.toFixed(3), targetAnchorY.toFixed(3));
+              console.log('[Drag] Relative anchor pos:', relativePos.x.toFixed(3), relativePos.y.toFixed(3));
+              
+              // 计算新的偏移量 = 目标锚点位置 - 相对锚点位置
+              const newOffsetX = targetAnchorX - relativePos.x;
+              const newOffsetY = targetAnchorY - relativePos.y;
+              
+              console.log('[Drag] New anchor offset:', newOffsetX.toFixed(3), newOffsetY.toFixed(3));
+
+              return { ...anchor, x: newOffsetX, y: newOffsetY };
+            }
+          }
+          return anchor;
+        });
+
+        // 直接更新状态，不通过命令系统
+        setProject({
+          ...project,
+          frames: {
+            ...project.frames,
+            [draggedFrameId]: {
+              ...frame,
+              anchors: updatedAnchors
+            }
+          }
+        });
+      } else {
+        // 没有相对锚点：更新绝对位置
+        let newX = Math.max(0, Math.min(0.8 - frame.width, mouseWc3X - dragOffset.x));
+        let newY = Math.max(0, Math.min(0.6 - frame.height, mouseWc3Y - dragOffset.y));
+        
+        // 网格吸附
+        if (snapToGrid) {
+          newX = snapValue(newX, gridSize);
+          newY = snapValue(newY, gridSize);
+        }
+
+        // 更新锚点
+        const updatedAnchors = updateAnchorsFromBounds(
+          frame.anchors,
+          newX,
+          newY,
+          frame.width,
+          frame.height
+        );
+
+        // 直接更新状态，不通过命令系统
+        setProject({
+          ...project,
+          frames: {
+            ...project.frames,
+            [draggedFrameId]: {
+              ...frame,
+              x: newX,
+              y: newY,
+              anchors: updatedAnchors
+            }
+          }
+        });
+      }
     } else if (isResizing && resizeFrameId && resizeDirection) {
       // 调整 Frame 大小 - 直接更新状态，不创建命令
       const frame = project.frames[resizeFrameId];
@@ -200,6 +282,14 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       newY = Math.max(0, Math.min(0.6 - newHeight, newY));
       newWidth = Math.max(0.01, Math.min(0.8 - newX, newWidth));
       newHeight = Math.max(0.01, Math.min(0.6 - newY, newHeight));
+
+      // 网格吸附
+      if (snapToGrid) {
+        newX = snapValue(newX, gridSize);
+        newY = snapValue(newY, gridSize);
+        newWidth = snapValue(newWidth, gridSize);
+        newHeight = snapValue(newHeight, gridSize);
+      }
 
       // 更新锚点
       const updatedAnchors = updateAnchorsFromBounds(
@@ -386,9 +476,22 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       const mouseWc3X = ((mouseX - MARGIN) / (CANVAS_WIDTH - 2 * MARGIN)) * 0.8;
       const mouseWc3Y = (mouseY / CANVAS_HEIGHT) * 0.6;
 
-      // 计算鼠标相对于 Frame 左下角的偏移
-      const offsetX = mouseWc3X - frame.x;
-      const offsetY = mouseWc3Y - frame.y;
+      // 获取控件的实际位置（考虑相对锚点）
+      const hasRelativeAnchors = frame.anchors?.some(a => a.relativeTo);
+      let actualX = frame.x;
+      let actualY = frame.y;
+      
+      if (hasRelativeAnchors) {
+        const calculatedPos = calculatePositionFromAnchors(frame, project.frames);
+        if (calculatedPos) {
+          actualX = calculatedPos.x;
+          actualY = calculatedPos.y;
+        }
+      }
+
+      // 计算鼠标相对于控件左下角的偏移
+      const offsetX = mouseWc3X - actualX;
+      const offsetY = mouseWc3Y - actualY;
 
       // 保存拖拽开始时的状态
       setDragStartState({
@@ -678,6 +781,17 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           {/* 渲染所有Frame（包括子控件），子控件也在画布根部独立渲染 */}
           {getAllFrameIds(project.rootFrameIds).map(frameId => renderFrame(frameId))}
           
+          {/* 锚点可视化 - 在canvas内部，跟随缩放变换 */}
+          {showAnchors && (
+            <AnchorVisualizer
+              frames={project.frames}
+              selectedFrameId={selectedFrameId}
+              canvasWidth={CANVAS_WIDTH}
+              canvasHeight={CANVAS_HEIGHT}
+              margin={MARGIN}
+            />
+          )}
+          
           {/* 框选矩形 */}
           {isBoxSelecting && (
             <div
@@ -710,6 +824,31 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         >
           {showGrid ? '🟩' : '⬜'} 网格
         </button>
+        <button 
+          onClick={() => setShowAnchors(!showAnchors)}
+          style={{ marginLeft: '10px', backgroundColor: showAnchors ? '#4CAF50' : undefined }}
+          title="切换锚点显示"
+        >
+          {showAnchors ? '🔗' : '⛓️'} 锚点
+        </button>
+        <button 
+          onClick={() => setSnapToGrid(!snapToGrid)}
+          style={{ marginLeft: '10px', backgroundColor: snapToGrid ? '#4CAF50' : undefined }}
+          title="切换网格吸附"
+        >
+          {snapToGrid ? '🧲' : '📍'} 吸附
+        </button>
+        <select
+          value={gridSize}
+          onChange={(e) => setGridSize(Number(e.target.value))}
+          style={{ marginLeft: '5px' }}
+          title="网格大小"
+        >
+          <option value={0.005}>0.005</option>
+          <option value={0.01}>0.01</option>
+          <option value={0.02}>0.02</option>
+          <option value={0.05}>0.05</option>
+        </select>
       </div>
     </div>
   );

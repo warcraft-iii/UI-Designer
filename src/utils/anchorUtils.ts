@@ -1,6 +1,50 @@
 import { FrameAnchor, FramePoint, FrameData } from '../types';
 
 /**
+ * 获取锚点在控件上的相对偏移（用于可视化，浏览器坐标系）
+ */
+export function getAnchorOffset(
+  point: FramePoint,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  const offsets: Record<FramePoint, { x: number; y: number }> = {
+    [FramePoint.TOPLEFT]: { x: 0, y: 0 },
+    [FramePoint.TOP]: { x: width / 2, y: 0 },
+    [FramePoint.TOPRIGHT]: { x: width, y: 0 },
+    [FramePoint.LEFT]: { x: 0, y: height / 2 },
+    [FramePoint.CENTER]: { x: width / 2, y: height / 2 },
+    [FramePoint.RIGHT]: { x: width, y: height / 2 },
+    [FramePoint.BOTTOMLEFT]: { x: 0, y: height },
+    [FramePoint.BOTTOM]: { x: width / 2, y: height },
+    [FramePoint.BOTTOMRIGHT]: { x: width, y: height },
+  };
+  return offsets[point] || { x: 0, y: 0 };
+}
+
+/**
+ * 获取锚点相对于控件左下角的偏移（WC3坐标系，用于拖动计算）
+ */
+export function getAnchorOffsetWc3(
+  point: FramePoint,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  const offsets: Record<FramePoint, { x: number; y: number }> = {
+    [FramePoint.TOPLEFT]: { x: 0, y: height },
+    [FramePoint.TOP]: { x: width / 2, y: height },
+    [FramePoint.TOPRIGHT]: { x: width, y: height },
+    [FramePoint.LEFT]: { x: 0, y: height / 2 },
+    [FramePoint.CENTER]: { x: width / 2, y: height / 2 },
+    [FramePoint.RIGHT]: { x: width, y: height / 2 },
+    [FramePoint.BOTTOMLEFT]: { x: 0, y: 0 },
+    [FramePoint.BOTTOM]: { x: width / 2, y: 0 },
+    [FramePoint.BOTTOMRIGHT]: { x: width, y: 0 },
+  };
+  return offsets[point] || { x: 0, y: 0 };
+}
+
+/**
  * 获取指定锚点在 Frame 上的绝对坐标
  */
 export function getAnchorPosition(

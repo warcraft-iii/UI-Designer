@@ -62,6 +62,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
         rootFrameIds: [],
         tableArrays: [],
         circleArrays: [],
+        exportVersion: 'reforged', // 添加默认导出版本
       });
       setCurrentFilePath(null);
     }

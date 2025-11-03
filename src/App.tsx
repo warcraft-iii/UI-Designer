@@ -3,7 +3,7 @@ import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
 import { ProjectTree } from './components/ProjectTree';
 import { PropertiesPanel } from './components/PropertiesPanel';
-import { TemplatePanel } from './components/TemplatePanel';
+import { SidePanel } from './components/SidePanel';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import './App.css';
 
@@ -26,7 +26,7 @@ function App() {
         <ProjectTree />
         <Canvas ref={canvasRef as any} />
         <PropertiesPanel />
-        <TemplatePanel />
+        <SidePanel />
       </div>
     </div>
   );
