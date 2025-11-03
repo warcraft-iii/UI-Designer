@@ -31,6 +31,28 @@ html, body, #root {
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
+}
+
+/* 项目树 - 固定宽度 */
+.app-content > .project-tree {
+  flex: 0 0 250px;
+}
+
+/* 画布 - 占据剩余空间 */
+.app-content > .canvas-container {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 属性面板 - 固定宽度 */
+.app-content > .properties-panel {
+  flex: 0 0 300px;
+}
+
+/* 模板面板 - 动态宽度 */
+.app-content > .template-panel {
+  flex: 0 0 auto;
 }
 
 /* 滚动条样式 */

@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
 import { ChangeParentCommand } from '../commands/FrameCommands';
+import { DuplicateCommand } from '../commands/DuplicateCommand';
+import { CreateTableArrayCommand } from '../commands/TableArrayCommand';
+import { CreateCircleArrayCommand } from '../commands/CircleArrayCommand';
+import { TableArrayDialog } from './TableArrayDialog';
+import { CircleArrayDialog } from './CircleArrayDialog';
 import { FrameType } from '../types';
 import './ProjectTree.css';
 
@@ -20,6 +25,12 @@ export const ProjectTree: React.FC = () => {
 
   // 管理"移动到"对话框
   const [moveToDialog, setMoveToDialog] = useState<{ frameId: string } | null>(null);
+
+  // 管理 TableArray 对话框
+  const [tableArrayDialog, setTableArrayDialog] = useState<{ frameId: string; frameName: string } | null>(null);
+
+  // 管理 CircleArray 对话框
+  const [circleArrayDialog, setCircleArrayDialog] = useState<{ frameId: string; frameName: string } | null>(null);
 
   // 管理面板宽度调整
   const [width, setWidth] = useState(280);
@@ -104,6 +115,74 @@ export const ProjectTree: React.FC = () => {
       deleteFrame(frameId);
       setContextMenu(null);
     }
+  };
+
+  // 复制节点
+  const handleDuplicate = (frameId: string) => {
+    const { executeCommand } = useCommandStore.getState();
+    const command = new DuplicateCommand(frameId);
+    executeCommand(command);
+    setContextMenu(null);
+  };
+
+  // 创建表格数组
+  const handleCreateTableArray = (frameId: string) => {
+    const frame = project.frames[frameId];
+    if (frame) {
+      setTableArrayDialog({ frameId, frameName: frame.name });
+      setContextMenu(null);
+    }
+  };
+
+  const handleTableArraySubmit = (params: {
+    rows: number;
+    cols: number;
+    xGap: number;
+    yGap: number;
+  }) => {
+    if (!tableArrayDialog) return;
+
+    const { executeCommand } = useCommandStore.getState();
+    const command = new CreateTableArrayCommand(
+      tableArrayDialog.frameId,
+      params.rows,
+      params.cols,
+      params.xGap,
+      params.yGap
+    );
+    executeCommand(command);
+    setTableArrayDialog(null);
+  };
+
+  // 创建环形数组
+  const handleCreateCircleArray = (frameId: string) => {
+    const frame = project.frames[frameId];
+    if (frame) {
+      setCircleArrayDialog({ frameId, frameName: frame.name });
+      setContextMenu(null);
+    }
+  };
+
+  const handleCircleArraySubmit = (params: {
+    centerX: number;
+    centerY: number;
+    radius: number;
+    count: number;
+    initialAngle: number;
+  }) => {
+    if (!circleArrayDialog) return;
+
+    const { executeCommand } = useCommandStore.getState();
+    const command = new CreateCircleArrayCommand(
+      circleArrayDialog.frameId,
+      params.centerX,
+      params.centerY,
+      params.radius,
+      params.count,
+      params.initialAngle
+    );
+    executeCommand(command);
+    setCircleArrayDialog(null);
   };
 
   // 检查是否是后代节点（防止循环引用）
@@ -398,6 +477,26 @@ export const ProjectTree: React.FC = () => {
             </div>
             <div 
               className="context-menu-item"
+              onClick={() => handleDuplicate(contextMenu.frameId)}
+            >
+              📋 复制
+            </div>
+            <div className="context-menu-divider" />
+            <div 
+              className="context-menu-item"
+              onClick={() => handleCreateTableArray(contextMenu.frameId)}
+            >
+              📊 创建表格数组
+            </div>
+            <div 
+              className="context-menu-item"
+              onClick={() => handleCreateCircleArray(contextMenu.frameId)}
+            >
+              ⭕ 创建环形数组
+            </div>
+            <div className="context-menu-divider" />
+            <div 
+              className="context-menu-item"
               onClick={() => {
                 setMoveToDialog({ frameId: contextMenu.frameId });
                 setContextMenu(null);
@@ -474,6 +573,25 @@ export const ProjectTree: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* TableArray 对话框 */}
+      {tableArrayDialog && (
+        <TableArrayDialog
+          frameId={tableArrayDialog.frameId}
+          frameName={tableArrayDialog.frameName}
+          onSubmit={handleTableArraySubmit}
+          onClose={() => setTableArrayDialog(null)}
+        />
+      )}
+
+      {/* CircleArray 对话框 */}
+      {circleArrayDialog && (
+        <CircleArrayDialog
+          frameName={circleArrayDialog.frameName}
+          onSubmit={handleCircleArraySubmit}
+          onClose={() => setCircleArrayDialog(null)}
+        />
       )}
     </div>
   );

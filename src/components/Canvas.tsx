@@ -75,9 +75,9 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       const canvasBounds = canvasRef.current?.getBoundingClientRect();
       if (!canvasBounds) return;
       
-      // 存储相对于画布容器的坐标
-      const relativeX = e.clientX - canvasBounds.left;
-      const relativeY = e.clientY - canvasBounds.top;
+      // 存储相对于画布容器的坐标（考虑缩放和偏移）
+      const relativeX = (e.clientX - canvasBounds.left - offset.x * scale) / scale;
+      const relativeY = (e.clientY - canvasBounds.top - offset.y * scale) / scale;
       
       setIsBoxSelecting(true);
       setBoxSelectStart({ x: relativeX, y: relativeY });
@@ -93,12 +93,12 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         y: e.clientY - panStart.y,
       });
     } else if (isBoxSelecting) {
-      // 更新框选区域（相对于画布容器）
+      // 更新框选区域（考虑缩放和偏移）
       const canvasBounds = canvasRef.current?.getBoundingClientRect();
       if (!canvasBounds) return;
       
-      const relativeX = e.clientX - canvasBounds.left;
-      const relativeY = e.clientY - canvasBounds.top;
+      const relativeX = (e.clientX - canvasBounds.left - offset.x * scale) / scale;
+      const relativeY = (e.clientY - canvasBounds.top - offset.y * scale) / scale;
       setBoxSelectEnd({ x: relativeX, y: relativeY });
     } else if (isDraggingFrame && draggedFrameId) {
       // 拖拽 Frame - 直接更新状态，不创建命令

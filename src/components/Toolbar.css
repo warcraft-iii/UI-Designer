@@ -1,47 +1,87 @@
 .toolbar {
-  background: #34495e;
-  padding: 10px 15px;
+  background: #2d2d30;
+  padding: 4px 8px;
   display: flex;
-  gap: 20px;
+  gap: 4px;
   align-items: center;
-  border-bottom: 2px solid #2c3e50;
+  border-bottom: 1px solid #3e3e42;
   flex-wrap: wrap;
+  height: 32px;
 }
 
 .toolbar-group {
   display: flex;
-  gap: 5px;
-  padding: 0 10px;
-  border-right: 1px solid #2c3e50;
+  gap: 1px;
+  padding: 0 4px;
+  border-right: 1px solid #3e3e42;
+  align-items: center;
 }
 
 .toolbar-group:last-child {
   border-right: none;
+  margin-left: auto;
 }
 
-.toolbar-btn {
-  background: #3498db;
-  color: white;
+/* 图标按钮样式 - VS2022 风格 */
+.toolbar-btn-icon {
+  background: transparent;
+  color: #d4d4d4;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 4px;
   cursor: pointer;
-  font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 5px;
-  transition: background-color 0.2s;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
 }
 
-.toolbar-btn:hover:not(:disabled) {
-  background: #2980b9;
+.toolbar-btn-icon:hover:not(:disabled) {
+  background: #3e3e42;
 }
 
-.toolbar-btn:disabled {
-  opacity: 0.5;
+.toolbar-btn-icon:active:not(:disabled) {
+  background: #505053;
+}
+
+.toolbar-btn-icon:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.toolbar-btn span {
-  font-size: 16px;
+/* 带文本的按钮样式 */
+.toolbar-btn-text {
+  background: transparent;
+  color: #d4d4d4;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.toolbar-btn-text:hover:not(:disabled) {
+  background: #3e3e42;
+}
+
+.toolbar-btn-text:active:not(:disabled) {
+  background: #505053;
+}
+
+.toolbar-btn-text:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* SVG 图标颜色继承 */
+.toolbar-btn-icon svg,
+.toolbar-btn-text svg {
+  color: inherit;
 }

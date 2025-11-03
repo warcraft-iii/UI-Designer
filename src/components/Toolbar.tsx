@@ -1,17 +1,24 @@
 import React from 'react';
-import { nanoid } from 'nanoid';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
-import { CreateFrameCommand } from '../commands/FrameCommands';
 import { AlignCommand, DistributeCommand, EqualSpacingCommand } from '../commands/AlignCommands';
 import { UnifySizeCommand } from '../commands/SizeCommands';
 import { ZIndexCommand } from '../commands/ZIndexCommands';
 import { AlignToCanvasCommand } from '../commands/AlignToCanvasCommands';
-import { FrameType, FrameData, ExportLanguage } from '../types';
+import { ExportLanguage } from '../types';
 import { saveProject, loadProject, exportCode } from '../utils/fileOperations';
 import { exportProject } from '../utils/codeExport';
-import { createDefaultAnchors } from '../utils/anchorUtils';
 import { ShortcutHelp } from './ShortcutHelp';
+import {
+  NewFileIcon, OpenFileIcon, SaveIcon,
+  UndoIcon, RedoIcon,
+  AlignLeftIcon, AlignCenterHIcon, AlignRightIcon,
+  AlignTopIcon, AlignCenterVIcon, AlignBottomIcon,
+  DistributeHIcon, DistributeVIcon,
+  SameWidthIcon, SameHeightIcon, SameSizeIcon,
+  BringToFrontIcon, BringForwardIcon, SendBackwardIcon, SendToBackIcon,
+  ExportIcon, HelpIcon,
+} from './icons/ToolbarIcons';
 import './Toolbar.css';
 
 interface ToolbarProps {
@@ -36,42 +43,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
     if (selectedFrameId) {
       executeCommand(new ZIndexCommand(selectedFrameId, action));
     }
-  };
-
-  const createFrame = (type: FrameType, name: string) => {
-    const parentId = selectedFrameId || null;
-    const parent = parentId ? project.frames[parentId] : null;
-    
-    const x = 0.1;
-    const y = 0.1;
-    const width = 0.1;
-    const height = 0.1;
-    
-    const newFrame: FrameData = {
-      id: nanoid(),
-      name: name + nanoid(4),
-      type,
-      x,
-      y,
-      width,
-      height,
-      z: parent ? parent.z + 1 : 1,
-      parentId,
-      children: [],
-      tooltip: false,
-      isRelative: false,
-      anchors: createDefaultAnchors(x, y, width, height),
-      diskTexture: '',
-      wc3Texture: '',
-      text: type === FrameType.TEXT_FRAME ? 'Text' : undefined,
-      textScale: 1,
-      textColor: '#FFFFFF',
-      horAlign: 'left',
-      verAlign: 'start',
-    };
-
-    const command = new CreateFrameCommand(newFrame);
-    executeCommand(command);
   };
 
   const handleNewProject = () => {
@@ -149,301 +120,269 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
     <div className="toolbar">
       {/* 文件操作 */}
       <div className="toolbar-group">
-        <button className="toolbar-btn" onClick={handleNewProject} title="新建">
-          <span>📄</span> 新建
+        <button className="toolbar-btn-icon" onClick={handleNewProject} title="新建 (Ctrl+N)">
+          <NewFileIcon />
         </button>
-        <button className="toolbar-btn" onClick={handleLoad} title="打开">
-          <span>📂</span> 打开
+        <button className="toolbar-btn-icon" onClick={handleLoad} title="打开 (Ctrl+O)">
+          <OpenFileIcon />
         </button>
-        <button className="toolbar-btn" onClick={handleSave} disabled={!currentFilePath} title="保存">
-          <span>💾</span> 保存
+        <button className="toolbar-btn-icon" onClick={handleSave} disabled={!currentFilePath} title="保存 (Ctrl+S)">
+          <SaveIcon />
         </button>
-        <button className="toolbar-btn" onClick={handleSaveAs} title="另存为">
-          <span>💾</span> 另存为
+        <button className="toolbar-btn-icon" onClick={handleSaveAs} title="另存为 (Ctrl+Shift+S)">
+          <SaveIcon />
         </button>
       </div>
 
       {/* 编辑操作 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn" 
+          className="toolbar-btn-icon" 
           onClick={undo}
           disabled={!canUndo()}
           title="撤销 (Ctrl+Z)"
         >
-          <span>↶</span> 撤销
+          <UndoIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={redo}
           disabled={!canRedo()}
           title="重做 (Ctrl+Y)"
         >
-          <span>↷</span> 重做
+          <RedoIcon />
         </button>
       </div>
 
       {/* 对齐工具 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'left'))}
           disabled={selectedFrameIds.length < 2}
           title="左对齐"
         >
-          <span>⊣</span> 左对齐
+          <AlignLeftIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'centerH'))}
           disabled={selectedFrameIds.length < 2}
           title="水平居中"
         >
-          <span>⊢</span> 居中
+          <AlignCenterHIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'right'))}
           disabled={selectedFrameIds.length < 2}
           title="右对齐"
         >
-          <span>⊢</span> 右对齐
+          <AlignRightIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'top'))}
           disabled={selectedFrameIds.length < 2}
           title="顶部对齐"
         >
-          <span>⊤</span> 顶对齐
+          <AlignTopIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'centerV'))}
           disabled={selectedFrameIds.length < 2}
           title="垂直居中"
         >
-          <span>⊥</span> 居中
+          <AlignCenterVIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new AlignCommand(selectedFrameIds, 'bottom'))}
           disabled={selectedFrameIds.length < 2}
           title="底部对齐"
         >
-          <span>⊥</span> 底对齐
+          <AlignBottomIcon />
         </button>
       </div>
 
       {/* 分布工具 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new DistributeCommand(selectedFrameIds, 'horizontal'))}
           disabled={selectedFrameIds.length < 3}
           title="水平分布"
         >
-          <span>↔</span> 水平分布
+          <DistributeHIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new DistributeCommand(selectedFrameIds, 'vertical'))}
           disabled={selectedFrameIds.length < 3}
           title="垂直分布"
         >
-          <span>↕</span> 垂直分布
+          <DistributeVIcon />
         </button>
       </div>
 
       {/* 统一大小 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new UnifySizeCommand(selectedFrameIds, 'width'))}
           disabled={selectedFrameIds.length < 2}
           title="统一宽度"
         >
-          <span>↔</span> 同宽
+          <SameWidthIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new UnifySizeCommand(selectedFrameIds, 'height'))}
           disabled={selectedFrameIds.length < 2}
           title="统一高度"
         >
-          <span>↕</span> 同高
+          <SameHeightIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new UnifySizeCommand(selectedFrameIds, 'both'))}
           disabled={selectedFrameIds.length < 2}
           title="统一大小"
         >
-          <span>⊡</span> 同大小
+          <SameSizeIcon />
         </button>
       </div>
 
       {/* 等间距 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new EqualSpacingCommand(selectedFrameIds, 'horizontal'))}
           disabled={selectedFrameIds.length < 3}
           title="水平等间距"
         >
-          <span>⇿</span> 等间距H
+          <DistributeHIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => executeCommand(new EqualSpacingCommand(selectedFrameIds, 'vertical'))}
           disabled={selectedFrameIds.length < 3}
           title="垂直等间距"
         >
-          <span>⥮</span> 等间距V
+          <DistributeVIcon />
         </button>
       </div>
 
       {/* 层级管理 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => handleZIndex('bringToFront')}
           disabled={!selectedFrameId}
           title="置顶"
         >
-          <span>⬆</span> 置顶
+          <BringToFrontIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => handleZIndex('moveUp')}
           disabled={!selectedFrameId}
           title="上移一层"
         >
-          <span>↑</span> 上移
+          <BringForwardIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => handleZIndex('moveDown')}
           disabled={!selectedFrameId}
           title="下移一层"
         >
-          <span>↓</span> 下移
+          <SendBackwardIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => handleZIndex('sendToBack')}
           disabled={!selectedFrameId}
           title="置底"
         >
-          <span>⬇</span> 置底
+          <SendToBackIcon />
         </button>
       </div>
 
       {/* 对齐到画布 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'left'))}
           disabled={!selectedFrameId}
           title="对齐到画布左边"
         >
-          <span>⊣</span> 画布左
+          <AlignLeftIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'centerH'))}
           disabled={!selectedFrameId}
           title="对齐到画布水平中心"
         >
-          <span>⊟</span> 画布中H
+          <AlignCenterHIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'right'))}
           disabled={!selectedFrameId}
           title="对齐到画布右边"
         >
-          <span>⊢</span> 画布右
+          <AlignRightIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'top'))}
           disabled={!selectedFrameId}
           title="对齐到画布顶部"
         >
-          <span>⊤</span> 画布顶
+          <AlignTopIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'centerV'))}
           disabled={!selectedFrameId}
           title="对齐到画布垂直中心"
         >
-          <span>⊞</span> 画布中V
+          <AlignCenterVIcon />
         </button>
         <button 
-          className="toolbar-btn"
+          className="toolbar-btn-icon"
           onClick={() => selectedFrameId && executeCommand(new AlignToCanvasCommand(selectedFrameId, 'bottom'))}
           disabled={!selectedFrameId}
           title="对齐到画布底部"
         >
-          <span>⊥</span> 画布底
-        </button>
-      </div>
-
-      {/* 插入元素 */}
-      <div className="toolbar-group">
-        <button 
-          className="toolbar-btn"
-          onClick={() => createFrame(FrameType.BACKDROP, 'Backdrop')}
-          title="插入Backdrop"
-        >
-          <span>▭</span> Backdrop
-        </button>
-        <button 
-          className="toolbar-btn"
-          onClick={() => createFrame(FrameType.BUTTON, 'Button')}
-          title="插入Button"
-        >
-          <span>🔘</span> Button
-        </button>
-        <button 
-          className="toolbar-btn"
-          onClick={() => createFrame(FrameType.TEXT_FRAME, 'Text')}
-          title="插入Text"
-        >
-          <span>T</span> Text
-        </button>
-        <button 
-          className="toolbar-btn"
-          onClick={() => createFrame(FrameType.CHECKBOX, 'Checkbox')}
-          title="插入Checkbox"
-        >
-          <span>☑</span> Checkbox
+          <AlignBottomIcon />
         </button>
       </div>
 
       {/* 导出 */}
       <div className="toolbar-group">
-        <button className="toolbar-btn" onClick={() => handleExport('jass')} title="导出为 JASS">
-          <span>📤</span> JASS
+        <button className="toolbar-btn-text" onClick={() => handleExport('jass')} title="导出为 JASS">
+          <ExportIcon /> JASS
         </button>
-        <button className="toolbar-btn" onClick={() => handleExport('lua')} title="导出为 Lua">
-          <span>📤</span> Lua
+        <button className="toolbar-btn-text" onClick={() => handleExport('lua')} title="导出为 Lua">
+          <ExportIcon /> Lua
         </button>
-        <button className="toolbar-btn" onClick={() => handleExport('ts')} title="导出为 TypeScript">
-          <span>📤</span> TS
+        <button className="toolbar-btn-text" onClick={() => handleExport('ts')} title="导出为 TypeScript">
+          <ExportIcon /> TS
         </button>
       </div>
 
       {/* 帮助 */}
       <div className="toolbar-group">
         <button 
-          className="toolbar-btn" 
+          className="toolbar-btn-icon" 
           onClick={() => setShowShortcutHelp(true)}
           title="查看快捷键 (F1)"
         >
-          <span>❓</span> 帮助
+          <HelpIcon />
         </button>
       </div>
 

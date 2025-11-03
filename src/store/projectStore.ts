@@ -136,7 +136,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       project: {
         ...state.project,
         frames: updatedFrames,
-        rootFrameIds: frame.parentId === null 
+        // 如果没有父控件（parentId 为 null 或 undefined），则添加到根节点
+        rootFrameIds: !frame.parentId 
           ? [...state.project.rootFrameIds, frame.id]
           : state.project.rootFrameIds,
       },
