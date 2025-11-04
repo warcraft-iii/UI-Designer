@@ -102,6 +102,15 @@
   padding: 8px;
 }
 
+.template-section-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a9eff;
+  padding: 12px 8px 8px;
+  margin-top: 8px;
+  border-bottom: 1px solid #333;
+}
+
 .template-item {
   display: flex;
   align-items: center;

@@ -67,6 +67,8 @@ export const TemplatePanel: React.FC = () => {
 
   const filteredTemplates = selectedCategory === 'all' 
     ? templates 
+    : selectedCategory === 'layout'
+    ? []  // 布局组合分类下不显示单个模板
     : getTemplatesByCategory(selectedCategory);
 
   const filteredCompositeTemplates = selectedCategory === 'all' || selectedCategory === 'layout'
@@ -121,6 +123,13 @@ export const TemplatePanel: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {/* 组合模板分隔标题 */}
+            {filteredCompositeTemplates.length > 0 && selectedCategory === 'all' && (
+              <div className="template-section-header">
+                📦 布局组合
+              </div>
+            )}
 
             {/* 组合模板 */}
             {filteredCompositeTemplates.map(template => (
