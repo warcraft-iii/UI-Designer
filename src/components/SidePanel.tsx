@@ -198,11 +198,6 @@ export const SidePanel: React.FC = () => {
                   </div>
                 ))}
 
-                {/* 组合模板分节 */}
-                {filteredCompositeTemplates.length > 0 && filteredTemplates.length > 0 && (
-                  <div className="template-section-header">📦 组合模板</div>
-                )}
-
                 {/* 组合模板 */}
                 {filteredCompositeTemplates.map(template => (
                   <div
