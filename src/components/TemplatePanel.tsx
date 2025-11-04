@@ -5,6 +5,14 @@ import { templates, compositeTemplates, getCategories, getTemplatesByCategory, F
 import { FrameData } from '../types';
 import './TemplatePanel.css';
 
+// 调试：立即检查导入
+console.log('=== TemplatePanel 导入检查 ===');
+console.log('compositeTemplates 是否存在:', !!compositeTemplates);
+console.log('compositeTemplates 类型:', typeof compositeTemplates);
+console.log('compositeTemplates 长度:', compositeTemplates?.length);
+console.log('compositeTemplates 内容:', compositeTemplates);
+console.log('templates 长度:', templates?.length);
+
 export const TemplatePanel: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -74,6 +82,13 @@ export const TemplatePanel: React.FC = () => {
   const filteredCompositeTemplates = selectedCategory === 'all' || selectedCategory === 'layout'
     ? compositeTemplates
     : [];
+
+  // 调试：检查筛选结果
+  console.log('=== 筛选结果 ===');
+  console.log('当前分类:', selectedCategory);
+  console.log('filteredTemplates:', filteredTemplates.length);
+  console.log('filteredCompositeTemplates:', filteredCompositeTemplates);
+  console.log('filteredCompositeTemplates 长度:', filteredCompositeTemplates?.length);
 
   return (
     <div className={`template-panel ${isExpanded ? 'expanded' : 'collapsed'}`}>
