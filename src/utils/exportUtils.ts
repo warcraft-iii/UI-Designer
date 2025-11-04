@@ -256,16 +256,28 @@ export async function exportToPNG(canvasElement: HTMLCanvasElement | null): Prom
 
     if (!path) return;
 
-    // 将 canvas 转换为 data URL
-    const dataUrl = canvasElement.toDataURL('image/png');
-    
-    // 直接使用浏览器下载（Tauri 环境下的简化方案）
-    const link = document.createElement('a');
-    link.download = path.split(/[\\/]/).pop() || 'ui-preview.png';
-    link.href = dataUrl;
-    link.click();
+    // 将 canvas 转换为 blob
+    canvasElement.toBlob(async (blob) => {
+      if (!blob) {
+        alert('生成图片失败');
+        return;
+      }
 
-    alert('导出 PNG 成功！');
+      try {
+        // 读取 blob 为 ArrayBuffer
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // 使用 Tauri 的文件系统 API 写入文件
+        const { writeFile } = await import('@tauri-apps/plugin-fs');
+        await writeFile(path, uint8Array);
+
+        alert('导出 PNG 成功！');
+      } catch (error) {
+        console.error('写入文件失败:', error);
+        alert(`导出失败: ${error}`);
+      }
+    }, 'image/png');
   } catch (error) {
     console.error('导出 PNG 失败:', error);
     alert(`导出失败: ${error}`);

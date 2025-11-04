@@ -52,6 +52,9 @@ export const AnchorVisualizer: React.FC<AnchorVisualizerProps> = ({
   const selectedFrame = frames[selectedFrameId];
   if (!selectedFrame || !selectedFrame.anchors || selectedFrame.anchors.length === 0) return null;
 
+  // 如果控件已隐藏，不渲染锚点
+  if (selectedFrame.visible === false) return null;
+
   // 获取控件的实际位置（考虑相对锚点）
   const calculatedPos = calculatePositionFromAnchors(selectedFrame, frames);
   const actualX = calculatedPos ? calculatedPos.x : selectedFrame.x;

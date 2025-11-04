@@ -67,8 +67,6 @@ export const TemplatePanel: React.FC = () => {
 
   const filteredTemplates = selectedCategory === 'all' 
     ? templates 
-    : selectedCategory === 'layout'
-    ? []  // 组合模板单独处理
     : getTemplatesByCategory(selectedCategory);
 
   const filteredCompositeTemplates = selectedCategory === 'all' || selectedCategory === 'layout'
