@@ -87,7 +87,10 @@ export const TemplatePanel: React.FC = () => {
       {isExpanded && (
         <div className="template-panel-content">
           <div className="template-panel-header">
-            <h3>📦 控件模板</h3>
+            <h3>📦 控件模板 ({filteredTemplates.length + filteredCompositeTemplates.length})</h3>
+            <div style={{fontSize: '11px', color: '#888', marginTop: '4px'}}>
+              基础: {filteredTemplates.length} | 组合: {filteredCompositeTemplates.length}
+            </div>
           </div>
 
           <div className="template-categories">
