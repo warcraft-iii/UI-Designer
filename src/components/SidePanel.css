@@ -133,10 +133,28 @@
   transition: all 0.2s;
 }
 
+.template-item.composite {
+  border-left: 3px solid #4a9eff;
+  background: linear-gradient(90deg, rgba(74, 158, 255, 0.1) 0%, #2d2d30 10%);
+}
+
 .template-item:hover {
   background-color: #3e3e42;
   border-color: #007acc;
   transform: translateX(2px);
+}
+
+.template-item.composite:hover {
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.template-section-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a9eff;
+  padding: 12px 8px 6px;
+  margin-top: 8px;
+  border-bottom: 1px solid #3e3e42;
 }
 
 .template-item-icon {
