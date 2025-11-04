@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { StylePreset } from '../types';
+import { ConfirmDialog } from './ConfirmDialog';
 import './StylePresetPanel.css';
 
 interface StylePresetPanelProps {
@@ -22,6 +23,7 @@ export const StylePresetPanel: React.FC<StylePresetPanelProps> = ({ onClose }) =
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [newPresetCategory, setNewPresetCategory] = useState('默认');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const presets = project.stylePresets || [];
   
@@ -55,11 +57,22 @@ export const StylePresetPanel: React.FC<StylePresetPanelProps> = ({ onClose }) =
     applyStylePreset(presetId, targetIds);
   };
 
-  // 删除预设
-  const handleDeletePreset = (presetId: string) => {
-    if (confirm('确定删除此样式预设？')) {
-      removeStylePreset(presetId);
+  // 删除预设 - 显示确认对话框
+  const handleDeletePreset = (presetId: string, presetName: string) => {
+    setDeleteConfirm({ id: presetId, name: presetName });
+  };
+
+  // 确认删除
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      removeStylePreset(deleteConfirm.id);
+      setDeleteConfirm(null);
     }
+  };
+
+  // 取消删除
+  const cancelDelete = () => {
+    setDeleteConfirm(null);
   };
 
   return (
@@ -139,12 +152,25 @@ export const StylePresetPanel: React.FC<StylePresetPanelProps> = ({ onClose }) =
               key={preset.id}
               preset={preset}
               onApply={() => handleApplyPreset(preset.id)}
-              onDelete={() => handleDeletePreset(preset.id)}
+              onDelete={() => handleDeletePreset(preset.id, preset.name)}
               onEdit={(updates) => updateStylePreset(preset.id, updates)}
             />
           ))
         )}
       </div>
+
+      {/* 删除确认对话框 */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="确认删除"
+          message={`确定要删除样式预设"${deleteConfirm.name}"吗？`}
+          confirmText="删除"
+          cancelText="取消"
+          type="danger"
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+      )}
     </div>
   );
 };
