@@ -51,6 +51,66 @@
   color: #cccccc;
 }
 
+/* 搜索和筛选 */
+.tree-search-filters {
+  padding: 8px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #2d2d30;
+}
+
+.tree-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.tree-search-input:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.tree-filters {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.tree-filter-select {
+  flex: 1;
+  padding: 4px 6px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #cccccc;
+  font-size: 11px;
+}
+
+.tree-filter-btn {
+  padding: 4px 8px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #cccccc;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tree-filter-btn:hover {
+  background: #505053;
+}
+
+.tree-filter-btn.active {
+  background: #007acc;
+  border-color: #007acc;
+}
+
+
 .tree-header-btn {
   background: transparent;
   border: none;

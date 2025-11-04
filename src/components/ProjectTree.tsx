@@ -22,6 +22,12 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
   // 管理展开/折叠状态
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(project.rootFrameIds));
   
+  // 搜索和筛选状态
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterType, setFilterType] = useState<FrameType | 'all'>('all');
+  const [filterVisible, setFilterVisible] = useState<boolean | null>(null);
+  const [filterLocked, setFilterLocked] = useState<boolean | null>(null);
+  
   // 管理重命名状态
   const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
   const [newName, setNewName] = useState<string>('');
@@ -361,9 +367,22 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
     };
   }, [isResizing]);
 
-  const renderTreeNode = (frameId: string, level: number = 0): React.ReactElement => {
+  const renderTreeNode = (frameId: string, level: number = 0): React.ReactElement | null => {
     const frame = project.frames[frameId];
-    if (!frame) return <></>;
+    if (!frame) return null;
+
+    // 应用筛选
+    const matchesSearch = !searchQuery || frame.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === 'all' || frame.type === filterType;
+    const matchesVisible = filterVisible === null || frame.visible === filterVisible;
+    const matchesLocked = filterLocked === null || frame.locked === filterLocked;
+    
+    // 如果当前节点不匹配所有筛选条件，检查是否有匹配的子节点
+    const currentMatches = matchesSearch && matchesType && matchesVisible && matchesLocked;
+    
+    if (!currentMatches && !frame.children.length) {
+      return null; // 没有子节点且当前不匹配，隐藏
+    }
 
     const isSelected = frameId === selectedFrameId;
     const hasChildren = frame.children.length > 0;
@@ -452,6 +471,43 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
         >
           ✕
         </button>
+      </div>
+      
+      {/* 搜索和筛选 */}
+      <div className="tree-search-filters">
+        <input 
+          type="text" 
+          className="tree-search-input"
+          placeholder="搜索控件..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <div className="tree-filters">
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value as FrameType | 'all')} className="tree-filter-select">
+            <option value="all">全部类型</option>
+            <option value={FrameType.BACKDROP}>背景</option>
+            <option value={FrameType.BUTTON}>按钮</option>
+            <option value={FrameType.TEXT_FRAME}>文本</option>
+            <option value={FrameType.CHECKBOX}>复选框</option>
+            <option value={FrameType.HORIZONTAL_BAR}>进度条</option>
+            <option value={FrameType.TEXTAREA}>文本域</option>
+            <option value={FrameType.EDITBOX}>编辑框</option>
+          </select>
+          <button 
+            className={`tree-filter-btn ${filterVisible === true ? 'active' : ''}`}
+            onClick={() => setFilterVisible(filterVisible === true ? null : true)}
+            title="只显示可见控件"
+          >
+            👁️
+          </button>
+          <button 
+            className={`tree-filter-btn ${filterLocked === false ? 'active' : ''}`}
+            onClick={() => setFilterLocked(filterLocked === false ? null : false)}
+            title="只显示未锁定控件"
+          >
+            🔓
+          </button>
+        </div>
       </div>
       
       <div className="tree-content">
