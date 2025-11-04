@@ -28,6 +28,9 @@ interface ProjectState {
   // 锁定操作
   toggleFrameLock: (id: string) => void;
   
+  // 可见性操作
+  toggleFrameVisibility: (id: string) => void;
+  
   // 剪贴板操作
   copyToClipboard: (frameId: string) => void;
   
@@ -279,6 +282,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           [id]: {
             ...frame,
             locked: !frame.locked
+          }
+        }
+      }
+    };
+  }),
+
+  toggleFrameVisibility: (id) => set((state) => {
+    const frame = state.project.frames[id];
+    if (!frame) return state;
+    
+    return {
+      project: {
+        ...state.project,
+        frames: {
+          ...state.project.frames,
+          [id]: {
+            ...frame,
+            visible: frame.visible === false ? true : false
           }
         }
       }

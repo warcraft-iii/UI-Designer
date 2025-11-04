@@ -547,6 +547,9 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     const frame = project.frames[frameId];
     if (!frame) return null;
 
+    // 如果控件被隐藏，不渲染
+    if (frame.visible === false) return null;
+
     const store = useProjectStore.getState();
     const isSelected = store.selectedFrameIds.includes(frameId);
     

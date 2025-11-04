@@ -389,7 +389,8 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose }) => {
           ) : (
             <>
               {frame.locked && <span style={{ marginRight: '4px', opacity: 0.6 }}>🔒</span>}
-              <span className="tree-node-name">{frame.name}</span>
+              {frame.visible === false && <span style={{ marginRight: '4px', opacity: 0.6 }}>👁️</span>}
+              <span className="tree-node-name" style={{ opacity: frame.visible === false ? 0.5 : 1 }}>{frame.name}</span>
             </>
           )}
           
@@ -515,6 +516,16 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose }) => {
               }}
             >
               {project.frames[contextMenu.frameId]?.locked ? '🔓 解锁' : '🔒 锁定'}
+            </div>
+            <div 
+              className="context-menu-item"
+              onClick={() => {
+                const { toggleFrameVisibility } = useProjectStore.getState();
+                toggleFrameVisibility(contextMenu.frameId);
+                setContextMenu(null);
+              }}
+            >
+              {project.frames[contextMenu.frameId]?.visible === false ? '👁️ 显示' : '🙈 隐藏'}
             </div>
             <div className="context-menu-divider" />
             <div 
