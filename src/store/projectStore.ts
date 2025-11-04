@@ -7,6 +7,7 @@ interface ProjectState {
   selectedFrameId: string | null;
   selectedFrameIds: string[]; // 多选支持
   clipboard: FrameData | null; // 剪贴板，存储被复制的控件
+  styleClipboard: Partial<FrameData> | null; // 样式剪贴板，存储被复制的样式
   
   // 项目操作
   setProject: (project: ProjectData) => void;
@@ -33,6 +34,8 @@ interface ProjectState {
   
   // 剪贴板操作
   copyToClipboard: (frameId: string) => void;
+  copyStyleToClipboard: (frameId: string) => void;
+  pasteStyleFromClipboard: (targetFrameIds: string[]) => void;
   
   // 通用设置
   updateGeneralSettings: (settings: Partial<Pick<ProjectData, 'libraryName' | 'originMode' | 'exportVersion' | 'backgroundImage' | 'hideGameUI' | 'hideHeroBar' | 'hideMiniMap' | 'hideResources' | 'hideButtonBar' | 'hidePortrait' | 'hideChat'>>) => void;
@@ -70,6 +73,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   selectedFrameId: null,
   selectedFrameIds: [],
   clipboard: null,
+  styleClipboard: null,
 
   setProject: (project) => {
     // 修复所有控件的锚点和children字段
@@ -325,6 +329,60 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const clonedFrame = cloneFrameRecursive(frame);
     set({ clipboard: clonedFrame });
     console.log('[Store] Copied to clipboard:', clonedFrame.name);
+  },
+
+  copyStyleToClipboard: (frameId) => {
+    const state = get();
+    const frame = state.project.frames[frameId];
+    if (!frame) return;
+    
+    // 只复制样式相关属性
+    const styleProps: Partial<FrameData> = {
+      // 视觉属性
+      textColor: frame.textColor,
+      textScale: frame.textScale,
+      horAlign: frame.horAlign,
+      verAlign: frame.verAlign,
+      
+      // 纹理
+      wc3Texture: frame.wc3Texture,
+      diskTexture: frame.diskTexture,
+      
+      // 文本
+      text: frame.text,
+    };
+    
+    set({ styleClipboard: styleProps });
+    console.log('[Store] Copied style to clipboard');
+  },
+
+  pasteStyleFromClipboard: (targetFrameIds) => {
+    const state = get();
+    if (!state.styleClipboard) {
+      console.warn('[Store] No style in clipboard');
+      return;
+    }
+    
+    const updatedFrames = { ...state.project.frames };
+    
+    targetFrameIds.forEach(frameId => {
+      const frame = updatedFrames[frameId];
+      if (frame && !frame.locked) {
+        updatedFrames[frameId] = {
+          ...frame,
+          ...state.styleClipboard,
+        };
+      }
+    });
+    
+    set({
+      project: {
+        ...state.project,
+        frames: updatedFrames,
+      },
+    });
+    
+    console.log(`[Store] Pasted style to ${targetFrameIds.length} frames`);
   },
 
   updateGeneralSettings: (settings) => set((state) => ({

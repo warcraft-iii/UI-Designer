@@ -304,3 +304,77 @@ export class BatchRemoveFrameCommand implements Command {
     this.execute();
   }
 }
+
+// 复制样式命令
+export class CopyStyleCommand implements Command {
+  private frameId: string;
+
+  constructor(frameId: string) {
+    this.frameId = frameId;
+  }
+
+  execute(): void {
+    const store = useProjectStore.getState();
+    store.copyStyleToClipboard(this.frameId);
+  }
+
+  undo(): void {
+    // 复制样式操作不需要撤销
+  }
+
+  redo(): void {
+    this.execute();
+  }
+}
+
+// 粘贴样式命令
+export class PasteStyleCommand implements Command {
+  private targetFrameIds: string[];
+  private previousStyles: Map<string, Partial<FrameData>> = new Map();
+
+  constructor(targetFrameIds: string[]) {
+    this.targetFrameIds = targetFrameIds;
+  }
+
+  execute(): void {
+    const store = useProjectStore.getState();
+    const styleClipboard = store.styleClipboard;
+    
+    if (!styleClipboard) {
+      console.warn('[PasteStyleCommand] No style in clipboard');
+      return;
+    }
+
+    // 保存当前样式以便撤销
+    this.targetFrameIds.forEach(frameId => {
+      const frame = store.project.frames[frameId];
+      if (frame) {
+        this.previousStyles.set(frameId, {
+          textColor: frame.textColor,
+          textScale: frame.textScale,
+          horAlign: frame.horAlign,
+          verAlign: frame.verAlign,
+          wc3Texture: frame.wc3Texture,
+          diskTexture: frame.diskTexture,
+          text: frame.text,
+        });
+      }
+    });
+
+    // 应用样式
+    store.pasteStyleFromClipboard(this.targetFrameIds);
+  }
+
+  undo(): void {
+    const store = useProjectStore.getState();
+    
+    this.previousStyles.forEach((style, frameId) => {
+      store.updateFrame(frameId, style);
+    });
+  }
+
+  redo(): void {
+    const store = useProjectStore.getState();
+    store.pasteStyleFromClipboard(this.targetFrameIds);
+  }
+}

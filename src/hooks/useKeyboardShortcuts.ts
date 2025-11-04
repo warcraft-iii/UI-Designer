@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
-import { RemoveFrameCommand, BatchRemoveFrameCommand, UpdateFrameCommand, CopyFrameCommand, PasteFrameCommand } from '../commands/FrameCommands';
+import { RemoveFrameCommand, BatchRemoveFrameCommand, UpdateFrameCommand, CopyFrameCommand, PasteFrameCommand, CopyStyleCommand, PasteStyleCommand } from '../commands/FrameCommands';
 import { DuplicateFrameCommand } from '../commands/DuplicateFrameCommand';
 import { saveProject, loadProject, exportCode } from '../utils/fileOperations';
 import { exportProject } from '../utils/codeExport';
@@ -95,6 +95,14 @@ export const useKeyboardShortcuts = (
           case 's':
             e.preventDefault();
             handleSaveAs();
+            break;
+          case 'c':
+            e.preventDefault();
+            handleCopyStyle();
+            break;
+          case 'v':
+            e.preventDefault();
+            handlePasteStyle();
             break;
           case 'a':
             e.preventDefault();
@@ -296,6 +304,24 @@ export const useKeyboardShortcuts = (
       // 粘贴到当前位置，稍微偏移
       executeCommand(new PasteFrameCommand(0.02, 0.02));
       console.log('✅ 已粘贴');
+    };
+
+    const handleCopyStyle = () => {
+      if (selectedFrameId) {
+        executeCommand(new CopyStyleCommand(selectedFrameId));
+        console.log('✅ 已复制样式');
+      }
+    };
+
+    const handlePasteStyle = () => {
+      const { selectedFrameIds } = useProjectStore.getState();
+      if (selectedFrameIds.length > 0) {
+        executeCommand(new PasteStyleCommand(selectedFrameIds));
+        console.log(`✅ 已粘贴样式到 ${selectedFrameIds.length} 个控件`);
+      } else if (selectedFrameId) {
+        executeCommand(new PasteStyleCommand([selectedFrameId]));
+        console.log('✅ 已粘贴样式');
+      }
     };
 
     const handleSelectAll = () => {

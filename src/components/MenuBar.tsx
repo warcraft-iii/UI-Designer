@@ -8,7 +8,7 @@ import { saveProject, loadProject, loadProjectFromPath } from '../utils/fileOper
 import { exportToFDF, exportToJSON, exportToPNG } from '../utils/exportUtils';
 import { AlignCommand, DistributeCommand } from '../commands/AlignCommands';
 import { ZIndexCommand } from '../commands/ZIndexCommands';
-import { RemoveFrameCommand, BatchRemoveFrameCommand } from '../commands/FrameCommands';
+import { RemoveFrameCommand, BatchRemoveFrameCommand, CopyStyleCommand, PasteStyleCommand } from '../commands/FrameCommands';
 
 interface MenuBarProps {
   currentFilePath: string | null;
@@ -60,7 +60,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
   
-  const { project, setProject, selectedFrameId, selectedFrameIds, clipboard, copyToClipboard } = useProjectStore();
+  const { project, setProject, selectedFrameId, selectedFrameIds, clipboard, styleClipboard, copyToClipboard } = useProjectStore();
   const { executeCommand, undo, redo, canUndo, canRedo } = useCommandStore();
 
   // 导出处理函数
@@ -291,6 +291,18 @@ export const MenuBar: React.FC<MenuBarProps> = ({
     }
   };
 
+  const handleCopyStyle = () => {
+    if (selectedFrameId) {
+      executeCommand(new CopyStyleCommand(selectedFrameId));
+    }
+  };
+
+  const handlePasteStyle = () => {
+    if (selectedFrameIds.length > 0) {
+      executeCommand(new PasteStyleCommand(selectedFrameIds));
+    }
+  };
+
   const handleDelete = () => {
     if (selectedFrameIds.length > 0) {
       // 过滤掉锁定的控件
@@ -461,6 +473,20 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         action: handlePaste,
         disabled: !clipboard
       },
+      { separator: true },
+      {
+        label: '复制样式',
+        shortcut: 'Ctrl+Shift+C',
+        action: handleCopyStyle,
+        disabled: !selectedFrameId
+      },
+      {
+        label: '粘贴样式',
+        shortcut: 'Ctrl+Shift+V',
+        action: handlePasteStyle,
+        disabled: !styleClipboard || selectedFrameIds.length === 0
+      },
+      { separator: true },
       {
         label: '删除',
         shortcut: 'Delete',
