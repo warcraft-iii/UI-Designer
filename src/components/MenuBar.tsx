@@ -7,6 +7,7 @@ import { saveProject, loadProject, loadProjectFromPath } from '../utils/fileOper
 import { exportToFDF, exportToJSON, exportToPNG } from '../utils/exportUtils';
 import { AlignCommand, DistributeCommand } from '../commands/AlignCommands';
 import { ZIndexCommand } from '../commands/ZIndexCommands';
+import { RemoveFrameCommand } from '../commands/FrameCommands';
 
 interface MenuBarProps {
   currentFilePath: string | null;
@@ -285,14 +286,15 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const handleDelete = () => {
     if (selectedFrameIds.length > 0) {
       if (confirm(`确定要删除选中的 ${selectedFrameIds.length} 个控件吗？`)) {
+        const { executeCommand } = useCommandStore.getState();
+        // 为每个选中的控件创建删除命令
         selectedFrameIds.forEach(id => {
           const frame = project.frames[id];
-          if (frame) {
-            delete project.frames[id];
-            project.rootFrameIds = project.rootFrameIds.filter(rid => rid !== id);
+          if (frame && !frame.locked) {
+            const command = new RemoveFrameCommand(id);
+            executeCommand(command);
           }
         });
-        setProject({ ...project });
       }
     }
   };

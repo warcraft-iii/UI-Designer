@@ -161,11 +161,24 @@ export const useKeyboardShortcuts = (
 
       // ========== 无修饰键 ==========
       else if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
-        // Delete/Backspace: 删除
+        // Delete/Backspace: 删除（支持多选）
         if (e.key === 'Delete' || e.key === 'Backspace') {
           e.preventDefault();
-          if (selectedFrameId) {
-            executeCommand(new RemoveFrameCommand(selectedFrameId));
+          const selectedIds = useProjectStore.getState().selectedFrameIds;
+          if (selectedIds.length > 0) {
+            // 删除所有选中的控件
+            selectedIds.forEach(id => {
+              const frame = project.frames[id];
+              if (frame && !frame.locked) {
+                executeCommand(new RemoveFrameCommand(id));
+              }
+            });
+          } else if (selectedFrameId) {
+            // 兼容旧的单选逻辑
+            const frame = project.frames[selectedFrameId];
+            if (frame && !frame.locked) {
+              executeCommand(new RemoveFrameCommand(selectedFrameId));
+            }
           }
         }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
-import { ChangeParentCommand } from '../commands/FrameCommands';
+import { ChangeParentCommand, RemoveFrameCommand } from '../commands/FrameCommands';
 import { DuplicateCommand } from '../commands/DuplicateCommand';
 import { CreateTableArrayCommand } from '../commands/TableArrayCommand';
 import { CreateCircleArrayCommand } from '../commands/CircleArrayCommand';
@@ -116,7 +116,9 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose }) => {
       : `确定要删除 "${frame.name}" 吗？`;
       
     if (confirm(confirmMsg)) {
-      deleteFrame(frameId);
+      const { executeCommand } = useCommandStore.getState();
+      const command = new RemoveFrameCommand(frameId);
+      executeCommand(command);
       setContextMenu(null);
     }
   };
