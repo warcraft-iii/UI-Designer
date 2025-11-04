@@ -4,6 +4,7 @@ import { AboutDialog } from './AboutDialog';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
 import { saveProject, loadProject, loadProjectFromPath } from '../utils/fileOperations';
+import { exportToFDF, exportToJSON, exportToPNG } from '../utils/exportUtils';
 import { AlignCommand, DistributeCommand } from '../commands/AlignCommands';
 import { ZIndexCommand } from '../commands/ZIndexCommands';
 
@@ -52,6 +53,22 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   
   const { project, setProject, selectedFrameId, selectedFrameIds, clipboard, copyToClipboard } = useProjectStore();
   const { executeCommand, undo, redo, canUndo, canRedo } = useCommandStore();
+
+  // 导出处理函数
+  const handleExportFDF = () => {
+    exportToFDF(project);
+  };
+
+  const handleExportJSON = () => {
+    exportToJSON(project);
+  };
+
+  const handleExportPNG = () => {
+    // 需要从 Canvas 组件获取 canvas 元素
+    // 暂时使用简化方案
+    const canvas = document.querySelector('canvas');
+    exportToPNG(canvas);
+  };
 
   // 加载最近打开的文件
   useEffect(() => {
@@ -363,9 +380,9 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       {
         label: '导出',
         submenu: [
-          { label: '导出为 FDF', action: () => console.log('Export FDF') },
-          { label: '导出为 PNG', action: () => console.log('Export PNG') },
-          { label: '导出为 JSON', action: () => console.log('Export JSON') }
+          { label: '导出为 FDF', action: handleExportFDF },
+          { label: '导出为 PNG', action: handleExportPNG },
+          { label: '导出为 JSON', action: handleExportJSON }
         ]
       },
       { separator: true },
