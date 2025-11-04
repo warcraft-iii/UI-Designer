@@ -50,6 +50,11 @@ html, body, #root {
   flex: 0 0 300px;
 }
 
+/* 样式预设面板 - 固定宽度 */
+.app-content > .style-preset-panel {
+  flex: 0 0 320px;
+}
+
 /* 侧边面板 - 动态宽度 */
 .app-content > .side-panel {
   flex: 0 0 auto;
