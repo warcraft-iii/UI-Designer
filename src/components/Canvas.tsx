@@ -528,21 +528,23 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   // 右键菜单处理
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[Canvas] Right click detected');
     
     // 检查是否点击在某个Frame上
     const target = e.target as HTMLElement;
     const frameElement = target.closest('.canvas-frame');
-    const frameId = frameElement ? Object.keys(project.frames).find(id => {
-      const frame = project.frames[id];
-      if (!canvasRef.current) return false;
-      
-      const bounds = canvasRef.current.getBoundingClientRect();
-      const wc3X = (((e.clientX - bounds.left - offset.x) / scale) - MARGIN) / (CANVAS_WIDTH - 2 * MARGIN) * 0.8;
-      const wc3Y = 0.6 - (((e.clientY - bounds.top - offset.y) / scale) - MARGIN) / (CANVAS_HEIGHT - 2 * MARGIN) * 0.6;
-      
-      return wc3X >= frame.x && wc3X <= frame.x + frame.width &&
-             wc3Y >= frame.y && wc3Y <= frame.y + frame.height;
-    }) : null;
+    
+    let frameId: string | null = null;
+    
+    if (frameElement) {
+      // 通过 data-frame-id 属性获取 frameId
+      frameId = frameElement.getAttribute('data-frame-id');
+      console.log('[Canvas] Clicked on frame:', frameId);
+    } else {
+      console.log('[Canvas] Clicked on canvas background');
+    }
 
     // 如果点击在Frame上且该Frame未选中，则选中它
     if (frameId && frameId !== selectedFrameId) {
@@ -552,17 +554,24 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
-      frameId: frameId || null
+      frameId: frameId
     });
+    
+    console.log('[Canvas] Context menu state set:', { x: e.clientX, y: e.clientY, frameId });
   };
 
   // 构建右键菜单项
   const buildContextMenuItems = (frameId: string | null): ContextMenuItem[] => {
+    console.log('[Canvas] Building context menu items for frameId:', frameId);
+    
     if (frameId) {
       const frame = project.frames[frameId];
-      if (!frame) return [];
+      if (!frame) {
+        console.log('[Canvas] Frame not found:', frameId);
+        return [];
+      }
 
-      return [
+      const items = [
         {
           label: '复制',
           shortcut: 'Ctrl+C',
@@ -591,9 +600,12 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           action: () => executeCommand(new RemoveFrameCommand(frameId))
         }
       ];
+      
+      console.log('[Canvas] Frame menu items:', items);
+      return items;
     } else {
       // 画布右键菜单
-      return [
+      const items = [
         {
           label: '粘贴',
           shortcut: 'Ctrl+V',
@@ -614,6 +626,9 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           action: () => setSnapToGrid(!snapToGrid)
         }
       ];
+      
+      console.log('[Canvas] Canvas menu items:', items);
+      return items;
     }
   };
 
@@ -764,6 +779,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       <div
         key={frameId}
         className="canvas-frame"
+        data-frame-id={frameId}
         style={style}
         onMouseDown={(e) => {
           // 先处理选择逻辑（在拖拽开始之前）

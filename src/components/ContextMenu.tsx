@@ -22,6 +22,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   const menuRef = React.useRef<HTMLDivElement>(null);
   const [submenuState, setSubmenuState] = React.useState<{ index: number; x: number; y: number } | null>(null);
 
+  console.log('[ContextMenu] Rendering at', { x, y, itemCount: items.length });
+
   // 点击外部关闭菜单
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
