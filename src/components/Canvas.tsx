@@ -449,7 +449,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     if (isBoxSelecting) {
       const canvasBounds = canvasRef.current?.getBoundingClientRect();
       if (canvasBounds) {
-        // 计算选择框的边界（相对于画布容器的坐标）
+        // 计算选择框的边界（已经是除以scale的坐标）
         const boxLeft = Math.min(boxSelectStart.x, boxSelectEnd.x);
         const boxRight = Math.max(boxSelectStart.x, boxSelectEnd.x);
         const boxTop = Math.min(boxSelectStart.y, boxSelectEnd.y);
@@ -458,7 +458,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         // 检查每个控件是否在选择框内
         const selectedIds: string[] = [];
         Object.values(project.frames).forEach(frame => {
-          // 计算控件在画布上的位置（像素坐标）
+          // 计算控件在画布上的位置（像素坐标，不考虑缩放）
           const calculatedPos = calculatePositionFromAnchors(frame, project.frames);
           const actualFrame = calculatedPos ? { ...frame, ...calculatedPos } : frame;
           
@@ -467,15 +467,14 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           const frameWidth = (actualFrame.width / 0.8) * (CANVAS_WIDTH - 2 * MARGIN);
           const frameHeight = (actualFrame.height / 0.6) * CANVAS_HEIGHT;
           
-          // 转换为相对于画布容器的坐标（考虑缩放和偏移）
-          const frameRelativeLeft = frameLeft * scale + offset.x * scale;
-          const frameRelativeRight = frameRelativeLeft + frameWidth * scale;
-          const frameRelativeTop = (CANVAS_HEIGHT - (frameBottom + frameHeight)) * scale + offset.y * scale;
-          const frameRelativeBottom = frameRelativeTop + frameHeight * scale;
+          // 转换为从顶部计算的Y坐标（与框选坐标系一致）
+          const frameTop = CANVAS_HEIGHT - (frameBottom + frameHeight);
+          const frameRight = frameLeft + frameWidth;
+          const frameBottomY = frameTop + frameHeight;
 
-          // 判断控件是否与选择框相交
-          if (frameRelativeRight >= boxLeft && frameRelativeLeft <= boxRight &&
-              frameRelativeBottom >= boxTop && frameRelativeTop <= boxBottom) {
+          // 判断控件是否与选择框相交（都是未缩放的画布坐标）
+          if (frameRight >= boxLeft && frameLeft <= boxRight &&
+              frameBottomY >= boxTop && frameTop <= boxBottom) {
             selectedIds.push(frame.id);
           }
         });
