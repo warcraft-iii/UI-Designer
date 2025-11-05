@@ -1,12 +1,12 @@
 /**
  * FDF 解析器完整测试脚本（Node.js 版本）
- * 运行: bun test-fdf.ts
+ * 运行: bun tests/test-fdf.ts
  */
 
-import { parseFDFToAST } from './src/utils/fdf';
-import { FDFTransformer } from './src/utils/fdfTransformer';
-import { FDFExporter } from './src/utils/fdfExporter';
-import { importFromFDFText } from './src/utils/fdfImport';
+import { parseFDFToAST } from '../src/utils/fdf';
+import { FDFTransformer } from '../src/utils/fdfTransformer';
+import { FDFExporter } from '../src/utils/fdfExporter';
+import { importFromFDFText } from '../src/utils/fdfImport';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -297,7 +297,7 @@ function scanFDFFiles(dirPath: string, files: string[] = []): string[] {
 async function runWC3Tests() {
   console.log('🧪 开始 WC3 原生 FDF 文件测试...\n');
 
-  const basePath = path.join(__dirname, 'vendor', 'UI', 'FrameDef');
+  const basePath = path.join(__dirname, '..', 'vendor', 'UI', 'FrameDef');
   console.log(`正在扫描 ${basePath}...`);
   const fdfFiles = scanFDFFiles(basePath);
   
@@ -345,7 +345,7 @@ async function runWC3Tests() {
 async function analyzeWC3FDF() {
   console.log('📊 分析 WC3 原生 FDF 文件...\n');
 
-  const basePath = path.join(__dirname, 'vendor', 'UI', 'FrameDef');
+  const basePath = path.join(__dirname, '..', 'vendor', 'UI', 'FrameDef');
   console.log(`正在扫描 ${basePath}...`);
   const fdfFiles = scanFDFFiles(basePath);
 

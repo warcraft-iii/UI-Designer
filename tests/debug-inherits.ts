@@ -1,6 +1,6 @@
-import { parseFDFToAST } from './src/utils/fdf';
-import { FDFTransformer } from './src/utils/fdfTransformer';
-import { FDFExporter } from './src/utils/fdfExporter';
+import { parseFDFToAST } from '../src/utils/fdf';
+import { FDFTransformer } from '../src/utils/fdfTransformer';
+import { FDFExporter } from '../src/utils/fdfExporter';
 
 const originalFdf = `Frame "BUTTON" "BaseButton" {
   Width 0.1,
