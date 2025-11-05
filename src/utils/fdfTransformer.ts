@@ -202,14 +202,12 @@ export class FDFTransformer {
     
     switch (name.toLowerCase()) {
       case 'width':
-        frame.width = this.toPixels(value as number);
+        frame.width = this.toPixels(value as number, 'x');
         break;
-        
+      
       case 'height':
-        frame.height = this.toPixels(value as number);
-        break;
-        
-      case 'setpoint':
+        frame.height = this.toPixels(value as number, 'y');
+        break;      case 'setpoint':
       case 'anchor':
         if (Array.isArray(value)) {
           this.applyAnchor(frame, value);
@@ -323,8 +321,8 @@ export class FDFTransformer {
       
       if (values.length === 3) {
         // Anchor point, x, y
-        const x = this.toPixels(values[1] as number);
-        const y = this.toPixels(values[2] as number);
+        const x = this.toPixels(values[1] as number, 'x');
+        const y = this.toPixels(values[2] as number, 'y');
         frame.anchors.push({ point, x, y });
         frame.x = x;
         frame.y = y;
@@ -333,8 +331,8 @@ export class FDFTransformer {
         const relativeToName = values[1] as string;
         const relativePointStr = String(values[2]).toUpperCase();
         const relativePoint = this.mapFramePoint(relativePointStr);
-        const relativeX = this.toPixels(values[3] as number);
-        const relativeY = this.toPixels(values[4] as number);
+        const relativeX = this.toPixels(values[3] as number, 'x');
+        const relativeY = this.toPixels(values[4] as number, 'y');
         
         frame.anchors.push({
           point,
@@ -513,10 +511,18 @@ export class FDFTransformer {
   /**
    * 将相对尺寸转换为像素（假设 0-1 范围是相对于基础尺寸）
    */
-  private toPixels(value: number): number {
+  /**
+   * 将 FDF 坐标转换为像素值
+   * @param value FDF 中的数值
+   * @param axis 'x' 或 'y' 轴
+   * @returns 像素值
+   */
+  private toPixels(value: number, axis: 'x' | 'y' = 'x'): number {
     if (value >= -1 && value <= 1) {
       // 相对值,转换为绝对值
-      return value * this.options.baseWidth;
+      // X 轴使用 baseWidth，Y 轴使用 baseHeight
+      const base = axis === 'x' ? this.options.baseWidth : this.options.baseHeight;
+      return value * base;
     }
     return value;
   }
