@@ -499,8 +499,18 @@ async function runEnhancedExportTests() {
     `;
     
     const frames = importFromFDFText(fdf);
+    
+    // 调试：查看导入了几个Frame
+    console.log(`导入了 ${frames.length} 个 Frame:`);
+    frames.forEach((f, i) => {
+      console.log(`  ${i+1}. ${f.name} (parentId: ${f.parentId}, children: ${f.children.length})`);
+    });
+    
     const exporter = new FDFExporterEnhanced({ exportNestedFrames: true });
     const exported = exporter.exportEnhanced(frames);
+    
+    console.log('\n导出的 FDF:');
+    console.log(exported);
     
     // 验证嵌套结构
     const ast = parseFDFToAST(exported);
@@ -508,8 +518,9 @@ async function runEnhancedExportTests() {
       item.type === 'FrameDefinition' && item.name === 'ParentFrame'
     );
     
+    // 检查 ParentFrame 的 properties 中是否有 NestedFrame 类型的 ChildText
     if (parentFrame && (parentFrame as any).properties.some((prop: any) => 
-      prop.type === 'NestedFrame' && prop.frame?.name === 'ChildText'
+      prop.type === 'NestedFrame' && prop.name === 'ChildText'
     )) {
       console.log('✓ 测试 13: 嵌套 Frame 导出');
       passed++;

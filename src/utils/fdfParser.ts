@@ -186,31 +186,95 @@ export class FDFParser {
     const properties: (FDFProperty | FDFNestedFrame)[] = [];
     
     while (!this.check(TokenType.RIGHT_BRACE) && !this.check(TokenType.EOF)) {
-      this.skipComments();
+      // 跳过注释和换行符
+      this.skipCommentsAndNewlines();
       
       if (this.check(TokenType.RIGHT_BRACE)) {
         break;
       }
       
-      // 嵌套 Frame (Texture, String 等)
-      if (this.currentToken().value.toUpperCase() === 'TEXTURE' && this.peek().type === TokenType.LEFT_BRACE) {
+      const currentType = this.currentToken().type;
+      
+      // 嵌套 Frame 定义：Frame "TYPE" "Name" { ... }
+      if (currentType === TokenType.FRAME) {
+        properties.push(this.parseNestedFrameDefinition());
+      }
+      // 嵌套特殊块 (Texture, String 等)
+      else if (this.currentToken().value.toUpperCase() === 'TEXTURE' && this.peek().type === TokenType.LEFT_BRACE) {
         properties.push(this.parseNestedFrame('Texture'));
       } else if (this.currentToken().value.toUpperCase() === 'STRING' && this.peek().type === TokenType.LEFT_BRACE) {
         properties.push(this.parseNestedFrame('String'));
       }
       // 普通属性
-      else if (this.check(TokenType.IDENTIFIER)) {
+      else if (currentType === TokenType.IDENTIFIER) {
         properties.push(this.parseProperty());
       }
       // 未知，跳过
       else {
         this.advance();
       }
-      
-      this.skipComments();
     }
     
     return properties;
+  }
+  
+  /**
+   * 跳过注释和换行符
+   */
+  private skipCommentsAndNewlines(): void {
+    while (this.check(TokenType.COMMENT) || this.check(TokenType.NEWLINE)) {
+      this.advance();
+    }
+  }
+  
+  /**
+   * 解析嵌套的 Frame 定义
+   * Frame "TYPE" "Name" [INHERITS [WITHCHILDREN] "Template"] { ... }
+   */
+  private parseNestedFrameDefinition(): FDFNestedFrame {
+    const startToken = this.expect(TokenType.FRAME);
+    
+    const frameTypeToken = this.expect(TokenType.STRING);
+    const frameType = frameTypeToken.value;
+    
+    const nameToken = this.expect(TokenType.STRING);
+    const name = nameToken.value;
+    
+    // 可选的 INHERITS [WITHCHILDREN] "Template"
+    let inherits: string | undefined;
+    
+    if (this.check(TokenType.INHERITS)) {
+      this.advance();
+      
+      // 检查可选的 WITHCHILDREN
+      if (this.check(TokenType.WITHCHILDREN)) {
+        this.advance();
+      }
+      
+      inherits = this.expect(TokenType.STRING).value;
+    }
+    
+    // 解析属性块
+    this.expect(TokenType.LEFT_BRACE);
+    const properties = this.parseProperties();
+    this.expect(TokenType.RIGHT_BRACE);
+    
+    // 跳过可选的逗号
+    if (this.check(TokenType.COMMA)) {
+      this.advance();
+    }
+    
+    return {
+      type: FDFNodeType.NESTED_FRAME,
+      frameType,
+      name,
+      inherits,
+      properties,
+      loc: {
+        start: { line: startToken.line, column: startToken.column },
+        end: { line: this.currentToken().line, column: this.currentToken().column },
+      },
+    };
   }
   
   /**
@@ -265,14 +329,22 @@ export class FDFParser {
     const values: FDFPropertyValue[] = [];
     
     // 读取第一个值
-    if (!this.check(TokenType.RIGHT_BRACE) && !this.check(TokenType.IDENTIFIER)) {
+    if (!this.check(TokenType.RIGHT_BRACE) && 
+        !this.check(TokenType.IDENTIFIER) && 
+        !this.check(TokenType.FRAME)) {
       values.push(this.parsePropertyValue());
       
       // 读取后续值（用逗号分隔）
       while (this.check(TokenType.COMMA)) {
         this.advance(); // 跳过逗号
-        if (!this.check(TokenType.RIGHT_BRACE) && !this.check(TokenType.IDENTIFIER)) {
+        // 检查下一个 token 是否是值（排除 RIGHT_BRACE, IDENTIFIER, FRAME）
+        if (!this.check(TokenType.RIGHT_BRACE) && 
+            !this.check(TokenType.IDENTIFIER) && 
+            !this.check(TokenType.FRAME)) {
           values.push(this.parsePropertyValue());
+        } else {
+          // 如果后面是 FRAME，退出循环，让 parseProperties 处理
+          break;
         }
       }
     }

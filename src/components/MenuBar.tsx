@@ -119,7 +119,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
 
   // 导出处理函数
   const handleExportFDF = () => {
-    exportToFDF(project);
+    exportToFDF(project, false); // 标准模式
+  };
+
+  const handleExportFDFEnhanced = () => {
+    exportToFDF(project, true); // 增强模式（无损、保留元数据）
   };
 
   const handleExportJSON = () => {
@@ -491,7 +495,9 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       {
         label: '导出',
         submenu: [
-          { label: '导出为 FDF', action: handleExportFDF },
+          { label: '导出为 FDF (标准)', action: handleExportFDF },
+          { label: '导出为 FDF (增强)', action: handleExportFDFEnhanced },
+          { separator: true },
           { label: '导出为 PNG', action: handleExportPNG },
           { label: '导出为 JSON', action: handleExportJSON }
         ]

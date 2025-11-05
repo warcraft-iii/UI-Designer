@@ -60,6 +60,9 @@ export class FDFTransformer {
         const frame = this.transformFrame(node);
         frames.push(frame);
         
+        // 递归处理嵌套的 Frame
+        this.collectNestedFrames(node, frame, frames);
+        
         // 注册为模板（如果有名称）
         if (node.name) {
           this.templateRegistry.set(node.name, frame);
@@ -68,6 +71,42 @@ export class FDFTransformer {
     }
     
     return frames;
+  }
+  
+  /**
+   * 收集嵌套的 Frame 并建立父子关系
+   */
+  private collectNestedFrames(node: FDFFrameDefinition, parentFrame: FrameData, allFrames: FrameData[]): void {
+    for (const prop of node.properties) {
+      if (prop.type === FDFNodeType.NESTED_FRAME) {
+        // 检查是否是真正的嵌套 Frame（不是 Texture、String 等特殊块）
+        const frameType = prop.frameType.toLowerCase();
+        if (frameType !== 'texture' && frameType !== 'string' && frameType !== 'controlstyle') {
+          // 将 FDFNestedFrame 转换为 FDFFrameDefinition 格式
+          const nestedFrameDef: FDFFrameDefinition = {
+            type: FDFNodeType.FRAME_DEFINITION,
+            frameType: prop.frameType,
+            name: prop.name || `NestedFrame_${Date.now()}`,
+            inherits: prop.inherits,
+            properties: prop.properties,
+            loc: prop.loc,
+          };
+          
+          // 转换嵌套的 Frame
+          const childFrame = this.transformFrame(nestedFrameDef);
+          
+          // 建立父子关系
+          childFrame.parentId = parentFrame.id;
+          parentFrame.children.push(childFrame.id);
+          
+          // 添加到数组
+          allFrames.push(childFrame);
+          
+          // 递归处理更深层的嵌套
+          this.collectNestedFrames(nestedFrameDef, childFrame, allFrames);
+        }
+      }
+    }
   }
   
   /**
