@@ -70,6 +70,9 @@ export class FDFTransformer {
       }
     }
     
+    // 后处理：将锚点的 relativeTo 从名称映射到 ID
+    this.resolveRelativeFrames(frames);
+    
     return frames;
   }
   
@@ -492,10 +495,40 @@ export class FDFTransformer {
    */
   private toPixels(value: number): number {
     if (value >= -1 && value <= 1) {
-      // 相对值，转换为绝对值
+      // 相对值,转换为绝对值
       return value * this.options.baseWidth;
     }
     return value;
+  }
+  
+  /**
+   * 解析锚点的 relativeTo 引用
+   * 将 Frame 名称映射到 Frame ID
+   */
+  private resolveRelativeFrames(frames: FrameData[]): void {
+    // 构建名称到 ID 的映射
+    const nameToId = new Map<string, string>();
+    for (const frame of frames) {
+      nameToId.set(frame.name, frame.id);
+    }
+    
+    // 解析所有锚点的 relativeTo
+    for (const frame of frames) {
+      if (frame.anchors && frame.anchors.length > 0) {
+        for (const anchor of frame.anchors) {
+          if (anchor.relativeTo && typeof anchor.relativeTo === 'string') {
+            // 查找相对引用的 Frame ID
+            const targetId = nameToId.get(anchor.relativeTo);
+            if (targetId) {
+              // 将名称替换为 ID
+              anchor.relativeTo = targetId;
+            } else {
+              console.warn(`[FDF Transformer] Cannot resolve relativeTo: ${anchor.relativeTo} for frame ${frame.name}`);
+            }
+          }
+        }
+      }
+    }
   }
   
   /**
