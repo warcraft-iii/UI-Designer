@@ -23,6 +23,8 @@ function App() {
   const [showFrameGroupPanel, setShowFrameGroupPanel] = React.useState(false);
   const [showDebugPanel, setShowDebugPanel] = React.useState(false);
   const [deleteConfirm, setDeleteConfirm] = React.useState<{ targets: string[] } | null>(null);
+  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0, wc3X: 0, wc3Y: 0 });
+  const [canvasScale, setCanvasScale] = React.useState(1);
   const executeCommand = useCommandStore(state => state.executeCommand);
   const { project, selectedFrameId } = useProjectStore();
   
@@ -73,6 +75,35 @@ function App() {
     window.addEventListener('keydown', handleDebugToggle);
     return () => window.removeEventListener('keydown', handleDebugToggle);
   }, []);
+
+  // 实时更新调试面板数据
+  React.useEffect(() => {
+    if (!showDebugPanel) return;
+
+    const updateDebugInfo = () => {
+      if (canvasRef.current?.getMousePosition) {
+        const pos = canvasRef.current.getMousePosition();
+        setMousePosition(pos);
+      }
+      if (canvasRef.current?.getScale) {
+        setCanvasScale(canvasRef.current.getScale());
+      }
+    };
+
+    // 使用 requestAnimationFrame 来实时更新
+    let animationId: number;
+    const animate = () => {
+      updateDebugInfo();
+      animationId = requestAnimationFrame(animate);
+    };
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [showDebugPanel]);
 
   // 注册全局快捷键
   useKeyboardShortcuts(
@@ -129,10 +160,10 @@ function App() {
 
       {/* Debug 面板 */}
       <DebugPanel
-        mouseX={canvasRef.current?.getMousePosition?.().x ?? 0}
-        mouseY={canvasRef.current?.getMousePosition?.().y ?? 0}
-        mouseWc3X={canvasRef.current?.getMousePosition?.().wc3X ?? 0}
-        mouseWc3Y={canvasRef.current?.getMousePosition?.().wc3Y ?? 0}
+        mouseX={mousePosition.x}
+        mouseY={mousePosition.y}
+        mouseWc3X={mousePosition.wc3X}
+        mouseWc3Y={mousePosition.wc3Y}
         selectedFrame={
           selectedFrameId && project.frames[selectedFrameId]
             ? {
@@ -141,7 +172,7 @@ function App() {
               }
             : null
         }
-        scale={canvasRef.current?.getScale?.() ?? 1}
+        scale={canvasScale}
         isVisible={showDebugPanel}
       />
     </div>
