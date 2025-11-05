@@ -119,16 +119,16 @@ export class FDFTransformer {
    * 转换 Frame 定义
    */
   private transformFrame(node: FDFFrameDefinition): FrameData {
-    // 根据 Frame 类型确定默认尺寸
+    // 根据 Frame 类型确定默认尺寸（使用相对单位）
     const frameType = this.mapFrameType(node.frameType);
-    let defaultWidth = 100;
-    let defaultHeight = 100;
+    let defaultWidth = 0.1;   // 默认宽度 0.1（相对单位）
+    let defaultHeight = 0.1;  // 默认高度 0.1（相对单位）
     
     // TEXT 类型的 Frame 通常较小
     // FrameType.TEXT_FRAME = 13
     if (frameType === 13) {
-      defaultWidth = 100;
-      defaultHeight = 12; // 约 0.02 单位，文本的常见高度
+      defaultWidth = 0.1;     // 宽度 0.1
+      defaultHeight = 0.012;  // 高度约 0.012（文本的常见高度）
     }
     
     // 创建基础 Frame
@@ -172,14 +172,14 @@ export class FDFTransformer {
     // 如果没有明确的宽高，尝试从锚点计算
     this.calculateSizeFromAnchors(frame);
     
-    // 如果 Frame 没有锚点且使用默认尺寸（100x100），给它一个更合理的默认配置
+    // 如果 Frame 没有锚点且使用默认尺寸（0.1x0.1），给它一个更合理的默认配置
     // 这通常发生在容器 Frame 上，它们依赖子元素的相对定位
-    if (frame.anchors.length === 0 && frame.width === 100 && frame.height === 100) {
-      // 创建一个默认锚点：TOPLEFT 在画布中心上方，使用画布的 40% 宽度和高度
-      frame.width = this.options.baseWidth * 0.4;
-      frame.height = this.options.baseHeight * 0.4;
-      frame.x = this.options.baseWidth * 0.3; // 居中偏左
-      frame.y = this.options.baseHeight * 0.3; // 居中偏下
+    if (frame.anchors.length === 0 && frame.width === 0.1 && frame.height === 0.1) {
+      // 创建一个默认配置：使用 40% 的画布尺寸
+      frame.width = 0.4;   // 0.4 相对单位（画布宽度 0.8 的 50%）
+      frame.height = 0.4;  // 0.4 相对单位（画布高度 0.6 的 67%）
+      frame.x = 0.2;       // 居中偏左
+      frame.y = 0.1;       // 居中偏下
       
       // 添加默认锚点
       frame.anchors = [{
@@ -524,18 +524,18 @@ export class FDFTransformer {
    * 将相对尺寸转换为像素（假设 0-1 范围是相对于基础尺寸）
    */
   /**
-   * 将 FDF 坐标转换为像素值
+   * 处理 FDF 坐标值
+   * FDF 中的值已经是相对坐标（0.0-1.0），编辑器内部也使用相对坐标
+   * 所以直接返回，不需要任何转换
    * @param value FDF 中的数值
-   * @param axis 'x' 或 'y' 轴
-   * @returns 像素值
+   * @param _axis 'x' 或 'y' 轴（保留参数以保持兼容性）
+   * @returns 相对坐标值
    */
-  private toPixels(value: number, axis: 'x' | 'y' = 'x'): number {
-    if (value >= -1 && value <= 1) {
-      // 相对值,转换为绝对值
-      // X 轴使用 baseWidth，Y 轴使用 baseHeight
-      const base = axis === 'x' ? this.options.baseWidth : this.options.baseHeight;
-      return value * base;
-    }
+  private toPixels(value: number, _axis: 'x' | 'y' = 'x'): number {
+    // 编辑器内部坐标系统：
+    // - X 轴: 0.0 - 0.8 (相对单位)
+    // - Y 轴: 0.0 - 0.6 (相对单位)
+    // FDF 也使用相对单位，所以直接返回
     return value;
   }
   
