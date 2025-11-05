@@ -1,291 +1,351 @@
-import { FrameData, FrameType, FramePoint, FrameAnchor } from '../types';
-import { createDefaultAnchors } from './anchorUtils';
-
 /**
- * FDF解析器 - 将FDF文件内容解析为FrameData对象
+ * FDF 语法分析器 (Parser)
+ * 
+ * 将 Token 流转换为 AST (抽象语法树)
  */
 
-interface ParsedFrame {
-  type: string;
-  name: string;
-  properties: Map<string, any>;
-  children: ParsedFrame[];
-}
+import {
+  FDFProgram,
+  FDFInclude,
+  FDFFrameDefinition,
+  FDFNestedFrame,
+  FDFProperty,
+  FDFPropertyValue,
+  FDFNodeType,
+} from './fdfAst';
+import { Token, TokenType } from './fdfLexer';
 
-/**
- * 将FDF类型名称转换为FrameType枚举
- */
-function fdfTypeToFrameType(fdfType: string): FrameType {
-  const typeMap: Record<string, FrameType> = {
-    'BACKDROP': FrameType.BACKDROP,
-    'BUTTON': FrameType.BUTTON,
-    'BROWSEBUTTON': FrameType.BROWSER_BUTTON,
-    'SCRIPTDIALOGBUTTON': FrameType.SCRIPT_DIALOG_BUTTON,
-    'TEXT': FrameType.TEXT_FRAME,
-    'TEXTFRAME': FrameType.TEXT_FRAME,
-    'EDITBOX': FrameType.EDITBOX,
-    'TEXTAREA': FrameType.TEXTAREA,
-    'SLIDER': FrameType.SLIDER,
-    'CHECKBOX': FrameType.CHECKBOX,
-    'SIMPLECHECKBOX': FrameType.CHECKBOX,
-    'HORIZONTALBAR': FrameType.HORIZONTAL_BAR,
-  };
+export class FDFParser {
+  private tokens: Token[];
+  private current: number = 0;
   
-  const normalizedType = fdfType.toUpperCase().replace(/\s+/g, '');
-  return typeMap[normalizedType] || FrameType.BACKDROP;
-}
-
-/**
- * 将FDF锚点名称转换为FramePoint枚举
- */
-function fdfPointToFramePoint(point: string): FramePoint {
-  const pointMap: Record<string, FramePoint> = {
-    'TOPLEFT': FramePoint.TOPLEFT,
-    'TOP': FramePoint.TOP,
-    'TOPRIGHT': FramePoint.TOPRIGHT,
-    'LEFT': FramePoint.LEFT,
-    'CENTER': FramePoint.CENTER,
-    'RIGHT': FramePoint.RIGHT,
-    'BOTTOMLEFT': FramePoint.BOTTOMLEFT,
-    'BOTTOM': FramePoint.BOTTOM,
-    'BOTTOMRIGHT': FramePoint.BOTTOMRIGHT,
-  };
+  constructor(tokens: Token[]) {
+    this.tokens = tokens;
+  }
   
-  return pointMap[point.toUpperCase()] || FramePoint.TOPLEFT;
-}
-
-/**
- * 解析FDF文件内容的主函数
- */
-export function parseFDF(content: string): FrameData[] {
-  try {
-    // 预处理：移除注释和空行
-    const lines = content.split('\n').map(line => {
-      // 移除单行注释
-      const commentIndex = line.indexOf('//');
-      if (commentIndex >= 0) {
-        line = line.substring(0, commentIndex);
-      }
-      return line.trim();
-    }).filter(line => line.length > 0 && !line.startsWith('IncludeFile'));
-
-    // 将所有行合并成一个字符串，便于解析
-    const cleanContent = lines.join(' ');
-
-    // 解析所有Frame定义
-    const parsedFrames = parseFrameDefinitions(cleanContent);
-
-    // 转换为FrameData对象
-    const frames: FrameData[] = [];
-    const idCounter = { value: 1 };
+  /**
+   * 获取当前 Token
+   */
+  private currentToken(): Token {
+    return this.tokens[this.current] || this.tokens[this.tokens.length - 1];
+  }
+  
+  /**
+   * 查看下一个 Token（不移动位置）
+   */
+  private peek(offset: number = 1): Token {
+    return this.tokens[this.current + offset] || this.tokens[this.tokens.length - 1];
+  }
+  
+  /**
+   * 前进一个 Token
+   */
+  private advance(): Token {
+    const token = this.currentToken();
+    if (this.current < this.tokens.length - 1) {
+      this.current++;
+    }
+    return token;
+  }
+  
+  /**
+   * 期望特定类型的 Token
+   */
+  private expect(type: TokenType): Token {
+    const token = this.currentToken();
+    if (token.type !== type) {
+      throw new Error(
+        `Expected token type ${type} but got ${token.type} at line ${token.line}:${token.column}`
+      );
+    }
+    return this.advance();
+  }
+  
+  /**
+   * 检查当前 Token 是否是特定类型
+   */
+  private check(type: TokenType): boolean {
+    return this.currentToken().type === type;
+  }
+  
+  /**
+   * 跳过注释
+   */
+  private skipComments(): void {
+    while (this.check(TokenType.COMMENT)) {
+      this.advance();
+    }
+  }
+  
+  /**
+   * 解析程序（顶层）
+   */
+  public parse(): FDFProgram {
+    const body: FDFProgram['body'] = [];
     
-    for (const parsed of parsedFrames) {
-      convertToFrameData(parsed, frames, null, idCounter);
+    while (!this.check(TokenType.EOF)) {
+      this.skipComments();
+      
+      if (this.check(TokenType.EOF)) {
+        break;
+      }
+      
+      // IncludeFile
+      if (this.check(TokenType.INCLUDE_FILE)) {
+        body.push(this.parseInclude());
+      }
+      // Frame 定义
+      else if (this.check(TokenType.FRAME)) {
+        const frame = this.parseFrameDefinition();
+        body.push(frame);
+      }
+      // 未知，跳过
+      else {
+        this.advance();
+      }
+      
+      this.skipComments();
     }
-
-    return frames;
-  } catch (error) {
-    console.error('FDF解析错误:', error);
-    throw new Error(`FDF解析失败: ${error}`);
+    
+    return {
+      type: FDFNodeType.PROGRAM,
+      body,
+    };
   }
-}
-
-/**
- * 从字符串中解析所有Frame定义
- */
-function parseFrameDefinitions(content: string): ParsedFrame[] {
-  const frames: ParsedFrame[] = [];
-  let pos = 0;
-
-  while (pos < content.length) {
-    // 查找 Frame 定义
-    const frameMatch = content.substring(pos).match(/Frame\s+"([^"]+)"\s+"([^"]+)"\s*\{/);
-    if (!frameMatch) break;
-
-    const matchStart = pos + (frameMatch.index || 0);
-    const type = frameMatch[1];
-    const name = frameMatch[2];
-
-    // 找到对应的结束大括号
-    const blockStart = matchStart + frameMatch[0].length;
-    const blockEnd = findMatchingBrace(content, blockStart);
-
-    if (blockEnd === -1) {
-      console.warn(`无法找到Frame "${name}" 的结束括号`);
-      break;
-    }
-
-    // 解析Frame内容
-    const blockContent = content.substring(blockStart, blockEnd);
-    const properties = parseProperties(blockContent);
-    const children = parseFrameDefinitions(blockContent);
-
-    frames.push({
-      type,
-      name,
-      properties,
-      children,
-    });
-
-    pos = blockEnd + 1;
-  }
-
-  return frames;
-}
-
-/**
- * 查找匹配的结束大括号
- */
-function findMatchingBrace(content: string, start: number): number {
-  let depth = 1;
-  for (let i = start; i < content.length; i++) {
-    if (content[i] === '{') depth++;
-    if (content[i] === '}') {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-}
-
-/**
- * 解析Frame的属性
- */
-function parseProperties(content: string): Map<string, any> {
-  const properties = new Map<string, any>();
-
-  // 移除嵌套的Frame定义（只保留当前层级的属性）
-  let cleanContent = content;
-  const frameRegex = /Frame\s+"[^"]+"\s+"[^"]+"\s*\{/g;
-  let match;
-  const framesToRemove: Array<{start: number, end: number}> = [];
   
-  while ((match = frameRegex.exec(content)) !== null) {
-    const start = match.index;
-    const end = findMatchingBrace(content, start + match[0].length);
-    if (end !== -1) {
-      framesToRemove.push({start, end: end + 1});
-    }
+  /**
+   * 解析 IncludeFile
+   * IncludeFile "path/to/file.fdf"
+   */
+  private parseInclude(): FDFInclude {
+    this.expect(TokenType.INCLUDE_FILE);
+    const pathToken = this.expect(TokenType.STRING);
+    
+    return {
+      type: FDFNodeType.INCLUDE,
+      path: pathToken.value,
+      loc: {
+        start: { line: pathToken.line, column: pathToken.column },
+        end: { line: pathToken.line, column: pathToken.column },
+      },
+    };
   }
-
-  // 从后往前移除，避免索引变化
-  framesToRemove.reverse().forEach(({start, end}) => {
-    cleanContent = cleanContent.substring(0, start) + cleanContent.substring(end);
-  });
-
-  // 解析属性行
-  const propRegex = /(\w+)\s+([^,]+),?/g;
-  while ((match = propRegex.exec(cleanContent)) !== null) {
-    const key = match[1];
-    let value: any = match[2].trim();
-
-    // 移除引号
-    if (value.startsWith('"') && value.endsWith('"')) {
-      value = value.substring(1, value.length - 1);
+  
+  /**
+   * 解析 Frame 定义
+   * Frame "TYPE" "Name" [INHERITS "Template"] { ... }
+   */
+  private parseFrameDefinition(): FDFFrameDefinition {
+    const startToken = this.expect(TokenType.FRAME);
+    
+    const frameTypeToken = this.expect(TokenType.STRING);
+    const frameType = frameTypeToken.value;
+    
+    const nameToken = this.expect(TokenType.STRING);
+    const name = nameToken.value;
+    
+    // 可选的 INHERITS
+    let inherits: string | undefined;
+    if (this.check(TokenType.INHERITS)) {
+      this.advance();
+      const inheritsToken = this.expect(TokenType.STRING);
+      inherits = inheritsToken.value;
     }
-
-    // 尝试转换为数字
-    if (!isNaN(parseFloat(value)) && isFinite(value)) {
-      value = parseFloat(value);
+    
+    // 解析属性块
+    this.expect(TokenType.LEFT_BRACE);
+    const properties = this.parseProperties();
+    this.expect(TokenType.RIGHT_BRACE);
+    
+    return {
+      type: FDFNodeType.FRAME_DEFINITION,
+      frameType,
+      name,
+      inherits,
+      properties,
+      loc: {
+        start: { line: startToken.line, column: startToken.column },
+        end: { line: this.currentToken().line, column: this.currentToken().column },
+      },
+    };
+  }
+  
+  /**
+   * 解析属性列表
+   */
+  private parseProperties(): (FDFProperty | FDFNestedFrame)[] {
+    const properties: (FDFProperty | FDFNestedFrame)[] = [];
+    
+    while (!this.check(TokenType.RIGHT_BRACE) && !this.check(TokenType.EOF)) {
+      this.skipComments();
+      
+      if (this.check(TokenType.RIGHT_BRACE)) {
+        break;
+      }
+      
+      // 嵌套 Frame (Texture, String 等)
+      if (this.currentToken().value.toUpperCase() === 'TEXTURE' && this.peek().type === TokenType.LEFT_BRACE) {
+        properties.push(this.parseNestedFrame('Texture'));
+      } else if (this.currentToken().value.toUpperCase() === 'STRING' && this.peek().type === TokenType.LEFT_BRACE) {
+        properties.push(this.parseNestedFrame('String'));
+      }
+      // 普通属性
+      else if (this.check(TokenType.IDENTIFIER)) {
+        properties.push(this.parseProperty());
+      }
+      // 未知，跳过
+      else {
+        this.advance();
+      }
+      
+      this.skipComments();
     }
-
-    // 处理布尔值
-    if (value === 'TRUE' || value === 'true') value = true;
-    if (value === 'FALSE' || value === 'false') value = false;
-
-    // SetPoint特殊处理
-    if (key === 'SetPoint') {
-      if (!properties.has('anchors')) {
-        properties.set('anchors', []);
+    
+    return properties;
+  }
+  
+  /**
+   * 解析嵌套 Frame
+   * Texture { ... }
+   * String "Name" { ... }
+   */
+  private parseNestedFrame(frameType: string): FDFNestedFrame {
+    const startToken = this.advance(); // TEXTURE 或 STRING
+    
+    // 可选的名称
+    let name: string | undefined;
+    if (this.check(TokenType.STRING)) {
+      name = this.advance().value;
+    }
+    
+    // 可选的 INHERITS
+    let inherits: string | undefined;
+    if (this.check(TokenType.INHERITS)) {
+      this.advance();
+      inherits = this.expect(TokenType.STRING).value;
+    }
+    
+    // 解析属性块
+    this.expect(TokenType.LEFT_BRACE);
+    const properties = this.parseProperties();
+    this.expect(TokenType.RIGHT_BRACE);
+    
+    return {
+      type: FDFNodeType.NESTED_FRAME,
+      frameType,
+      name,
+      inherits,
+      properties,
+      loc: {
+        start: { line: startToken.line, column: startToken.column },
+        end: { line: this.currentToken().line, column: this.currentToken().column },
+      },
+    };
+  }
+  
+  /**
+   * 解析属性
+   * PropertyName value
+   * PropertyName value1, value2, value3
+   */
+  private parseProperty(): FDFProperty {
+    const nameToken = this.expect(TokenType.IDENTIFIER);
+    const name = nameToken.value;
+    
+    // 解析值
+    const values: FDFPropertyValue[] = [];
+    
+    // 读取第一个值
+    if (!this.check(TokenType.RIGHT_BRACE) && !this.check(TokenType.IDENTIFIER)) {
+      values.push(this.parsePropertyValue());
+      
+      // 读取后续值（用逗号分隔）
+      while (this.check(TokenType.COMMA)) {
+        this.advance(); // 跳过逗号
+        if (!this.check(TokenType.RIGHT_BRACE) && !this.check(TokenType.IDENTIFIER)) {
+          values.push(this.parsePropertyValue());
+        }
       }
-      const anchorMatch = value.match(/(\w+)\s*,\s*"([^"]+)"\s*,\s*(\w+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)/);
-      if (anchorMatch) {
-        properties.get('anchors').push({
-          point: anchorMatch[1],
-          relativeTo: anchorMatch[2],
-          relativePoint: anchorMatch[3],
-          x: parseFloat(anchorMatch[4]),
-          y: parseFloat(anchorMatch[5]),
-        });
-      }
+    }
+    
+    // 如果没有值，则为标志位属性（如 DecorateFileNames）
+    let value: FDFPropertyValue;
+    if (values.length === 0) {
+      // 标志位属性，值为 true
+      value = {
+        type: FDFNodeType.IDENTIFIER,
+        name: 'true',
+      };
+    } else if (values.length === 1) {
+      value = values[0];
     } else {
-      properties.set(key, value);
+      value = {
+        type: FDFNodeType.ARRAY_LITERAL,
+        elements: values,
+      };
     }
+    
+    return {
+      type: FDFNodeType.PROPERTY,
+      name,
+      value,
+      loc: {
+        start: { line: nameToken.line, column: nameToken.column },
+        end: { line: this.currentToken().line, column: this.currentToken().column },
+      },
+    };
   }
-
-  return properties;
-}
-
-/**
- * 将ParsedFrame转换为FrameData
- */
-function convertToFrameData(
-  parsed: ParsedFrame,
-  frames: FrameData[],
-  parentId: string | null,
-  idCounter: { value: number }
-): string {
-  const id = `frame_${idCounter.value++}`;
-  const props = parsed.properties;
-
-  // 获取基本属性
-  const width = props.get('Width') || 0.1;
-  const height = props.get('Height') || 0.1;
-
-  // 解析锚点
-  let anchors: FrameAnchor[] = [];
-  let x = 0.1;
-  let y = 0.1;
-
-  if (props.has('anchors')) {
-    const fdfAnchors = props.get('anchors');
-    anchors = fdfAnchors.map((a: any) => ({
-      point: fdfPointToFramePoint(a.point),
-      relativeTo: a.relativeTo === 'GameUI' || a.relativeTo === 'UIParent' ? undefined : a.relativeTo,
-      relativePoint: fdfPointToFramePoint(a.relativePoint),
-      x: a.x,
-      y: -a.y, // FDF使用负Y，需要转换
-    }));
-
-    // 从第一个锚点推算位置
-    if (anchors.length > 0) {
-      x = anchors[0].x;
-      y = -anchors[0].y;
+  
+  /**
+   * 解析属性值
+   */
+  private parsePropertyValue(): FDFPropertyValue {
+    const token = this.currentToken();
+    
+    // 字符串字面量
+    if (this.check(TokenType.STRING)) {
+      this.advance();
+      return {
+        type: FDFNodeType.STRING_LITERAL,
+        value: token.value,
+        loc: {
+          start: { line: token.line, column: token.column },
+          end: { line: token.line, column: token.column },
+        },
+      };
     }
-  } else {
-    // 没有锚点时创建默认锚点
-    anchors = createDefaultAnchors(x, y, width, height);
+    
+    // 数字字面量
+    if (this.check(TokenType.NUMBER)) {
+      this.advance();
+      return {
+        type: FDFNodeType.NUMBER_LITERAL,
+        value: parseFloat(token.value),
+        loc: {
+          start: { line: token.line, column: token.column },
+          end: { line: token.line, column: token.column },
+        },
+      };
+    }
+    
+    // 标识符
+    if (this.check(TokenType.IDENTIFIER)) {
+      this.advance();
+      return {
+        type: FDFNodeType.IDENTIFIER,
+        name: token.value,
+        loc: {
+          start: { line: token.line, column: token.column },
+          end: { line: token.line, column: token.column },
+        },
+      };
+    }
+    
+    // 未知类型，跳过
+    this.advance();
+    return {
+      type: FDFNodeType.IDENTIFIER,
+      name: 'unknown',
+    };
   }
-
-  // 创建FrameData对象
-  const frameData: FrameData = {
-    id,
-    name: parsed.name,
-    type: fdfTypeToFrameType(parsed.type),
-    x,
-    y,
-    width,
-    height,
-    z: frames.length,
-    parentId,
-    children: [],
-    tooltip: false,
-    isRelative: false,
-    anchors,
-    diskTexture: '',
-    wc3Texture: props.get('BackdropBackground') || props.get('BackdropTexture') || '',
-    text: props.get('Text') || props.get('ButtonText') || props.get('EditTextFrame') || '',
-    textScale: props.get('FontSize') || 1.0,
-    textColor: '#FFFFFF',
-  };
-
-  frames.push(frameData);
-
-  // 递归处理子Frame
-  for (const child of parsed.children) {
-    const childId = convertToFrameData(child, frames, id, idCounter);
-    frameData.children.push(childId);
-  }
-
-  return id;
 }
