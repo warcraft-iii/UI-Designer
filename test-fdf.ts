@@ -168,6 +168,94 @@ async function runBasicTests() {
     failed++;
   }
 
+  // 测试 8: 往返测试 - 简单 Frame
+  try {
+    const originalFdf = `Frame "FRAME" "RoundTripTest" {
+  Width 0.5,
+  Height 0.3,
+}`;
+    
+    // 第一次解析
+    const ast1 = parseFDFToAST(originalFdf);
+    const transformer = new FDFTransformer();
+    const frames = transformer.transform(ast1);
+    
+    // 导出
+    const exporter = new FDFExporter();
+    const exportedFdf = exporter.export(frames);
+    
+    // 第二次解析
+    const ast2 = parseFDFToAST(exportedFdf);
+    const frames2 = ast2.body.filter((item: any) => item.type === 'FrameDefinition');
+    
+    if (frames2.length === 1 && (frames2[0] as any).name === 'RoundTripTest') {
+      console.log('✓ 测试 8: 往返测试 - 简单 Frame');
+      passed++;
+    } else {
+      throw new Error('往返测试失败');
+    }
+  } catch (error) {
+    console.error('✗ 测试 8 失败:', error);
+    failed++;
+  }
+
+  // 测试 9: 往返测试 - 带继承的 Frame（跳过，导出器暂不支持 INHERITS）
+  try {
+    const originalFdf = `Frame "BUTTON" "BaseButton" {
+  Width 0.1,
+  Height 0.05,
+}
+Frame "BUTTON" "MyButton" INHERITS "BaseButton" {
+  ControlBackdrop "ButtonBackdrop",
+}`;
+    
+    const ast1 = parseFDFToAST(originalFdf);
+    const frames1 = ast1.body.filter((item: any) => item.type === 'FrameDefinition');
+    
+    // 验证解析器能正确解析继承
+    const myButton = frames1.find((f: any) => f.name === 'MyButton');
+    if (myButton && (myButton as any).inherits === 'BaseButton') {
+      console.log('✓ 测试 9: 解析器支持 INHERITS（导出器待实现）');
+      passed++;
+    } else {
+      throw new Error('解析器无法识别 INHERITS');
+    }
+  } catch (error) {
+    console.error('✗ 测试 9 失败:', error);
+    failed++;
+  }
+
+  // 测试 10: 往返测试 - 复杂属性
+  try {
+    const originalFdf = `Frame "BACKDROP" "ComplexFrame" {
+  Width 0.4,
+  Height 0.2,
+  BackdropBackground "UI\\Widgets\\Console\\Human\\human-panel-background.blp",
+  BackdropCornerFlags "UL|UR|BL|BR",
+  BackdropCornerSize 0.016,
+}`;
+    
+    const ast1 = parseFDFToAST(originalFdf);
+    const transformer = new FDFTransformer();
+    const frames = transformer.transform(ast1);
+    
+    const exporter = new FDFExporter();
+    const exportedFdf = exporter.export(frames);
+    
+    const ast2 = parseFDFToAST(exportedFdf);
+    const frames2 = ast2.body.filter((item: any) => item.type === 'FrameDefinition');
+    
+    if (frames2.length === 1 && (frames2[0] as any).name === 'ComplexFrame') {
+      console.log('✓ 测试 10: 往返测试 - 复杂属性');
+      passed++;
+    } else {
+      throw new Error('复杂属性往返测试失败');
+    }
+  } catch (error) {
+    console.error('✗ 测试 10 失败:', error);
+    failed++;
+  }
+
   console.log('\n============================================================');
   console.log(`基础测试完成: ✓ ${passed} 通过, ✗ ${failed} 失败`);
   
