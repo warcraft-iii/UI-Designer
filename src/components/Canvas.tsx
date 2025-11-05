@@ -1,4 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
+import ReactDOM from 'react-dom';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
 import { UpdateFrameCommand, RemoveFrameCommand, CopyFrameCommand, PasteFrameCommand } from '../commands/FrameCommands';
@@ -530,8 +531,6 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('[Canvas] Right click detected');
-    
     // 检查是否点击在某个Frame上
     const target = e.target as HTMLElement;
     const frameElement = target.closest('.canvas-frame');
@@ -541,9 +540,6 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     if (frameElement) {
       // 通过 data-frame-id 属性获取 frameId
       frameId = frameElement.getAttribute('data-frame-id');
-      console.log('[Canvas] Clicked on frame:', frameId);
-    } else {
-      console.log('[Canvas] Clicked on canvas background');
     }
 
     // 如果点击在Frame上且该Frame未选中，则选中它
@@ -556,22 +552,15 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       y: e.clientY,
       frameId: frameId
     });
-    
-    console.log('[Canvas] Context menu state set:', { x: e.clientX, y: e.clientY, frameId });
   };
 
   // 构建右键菜单项
   const buildContextMenuItems = (frameId: string | null): ContextMenuItem[] => {
-    console.log('[Canvas] Building context menu items for frameId:', frameId);
-    
     if (frameId) {
       const frame = project.frames[frameId];
-      if (!frame) {
-        console.log('[Canvas] Frame not found:', frameId);
-        return [];
-      }
+      if (!frame) return [];
 
-      const items = [
+      return [
         {
           label: '复制',
           shortcut: 'Ctrl+C',
@@ -600,12 +589,9 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           action: () => executeCommand(new RemoveFrameCommand(frameId))
         }
       ];
-      
-      console.log('[Canvas] Frame menu items:', items);
-      return items;
     } else {
       // 画布右键菜单
-      const items = [
+      return [
         {
           label: '粘贴',
           shortcut: 'Ctrl+V',
@@ -626,9 +612,6 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           action: () => setSnapToGrid(!snapToGrid)
         }
       ];
-      
-      console.log('[Canvas] Canvas menu items:', items);
-      return items;
     }
   };
 
@@ -1101,14 +1084,15 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         </select>
       </div>
 
-      {/* 右键菜单 */}
-      {contextMenu && (
+      {/* 右键菜单 - 使用 Portal 渲染到 body */}
+      {contextMenu && ReactDOM.createPortal(
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           items={buildContextMenuItems(contextMenu.frameId)}
           onClose={() => setContextMenu(null)}
-        />
+        />,
+        document.body
       )}
     </div>
   );
