@@ -16,6 +16,7 @@ interface ProjectState {
   
   // Frame操作
   addFrame: (frame: FrameData) => void;
+  addFrames: (frames: FrameData[]) => void; // 批量添加控件（用于FDF导入）
   updateFrame: (id: string, updates: Partial<FrameData>) => void;
   removeFrame: (id: string) => void;
   deleteFrame: (id: string) => void; // 别名，等同于 removeFrame
@@ -176,6 +177,44 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         rootFrameIds: !frame.parentId 
           ? [...state.project.rootFrameIds, frame.id]
           : state.project.rootFrameIds,
+      },
+    };
+  }),
+
+  // 批量添加控件（用于FDF导入）
+  addFrames: (frames) => set((state) => {
+    const updatedFrames = { ...state.project.frames };
+    const newRootFrameIds = [...state.project.rootFrameIds];
+    
+    // 先添加所有控件
+    for (const frame of frames) {
+      updatedFrames[frame.id] = frame;
+      
+      // 如果没有父控件，添加到根节点
+      if (!frame.parentId) {
+        newRootFrameIds.push(frame.id);
+      }
+    }
+    
+    // 然后建立父子关系
+    for (const frame of frames) {
+      if (frame.parentId && updatedFrames[frame.parentId]) {
+        const parentFrame = updatedFrames[frame.parentId];
+        // 确保不重复添加
+        if (!parentFrame.children.includes(frame.id)) {
+          updatedFrames[frame.parentId] = {
+            ...parentFrame,
+            children: [...parentFrame.children, frame.id],
+          };
+        }
+      }
+    }
+    
+    return {
+      project: {
+        ...state.project,
+        frames: updatedFrames,
+        rootFrameIds: newRootFrameIds,
       },
     };
   }),

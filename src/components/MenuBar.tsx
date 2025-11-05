@@ -4,7 +4,7 @@ import { AboutDialog } from './AboutDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
-import { saveProject, loadProject, loadProjectFromPath } from '../utils/fileOperations';
+import { saveProject, loadProject, loadProjectFromPath, importFromFDF } from '../utils/fileOperations';
 import { exportToFDF, exportToJSON, exportToPNG } from '../utils/exportUtils';
 import { AlignCommand, DistributeCommand } from '../commands/AlignCommands';
 import { ZIndexCommand } from '../commands/ZIndexCommands';
@@ -68,8 +68,22 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
   
-  const { project, setProject, selectedFrameId, selectedFrameIds, clipboard, styleClipboard, copyToClipboard, clearGuides } = useProjectStore();
+  const { project, setProject, selectedFrameId, selectedFrameIds, clipboard, styleClipboard, copyToClipboard, clearGuides, addFrames } = useProjectStore();
   const { executeCommand, undo, redo, canUndo, canRedo } = useCommandStore();
+
+  // FDF导入处理函数
+  const handleImportFDF = async () => {
+    try {
+      const frames = await importFromFDF();
+      if (frames && frames.length > 0) {
+        addFrames(frames);
+        alert(`成功导入 ${frames.length} 个控件`);
+      }
+    } catch (error) {
+      console.error('导入FDF失败:', error);
+      alert(`导入FDF失败: ${error}`);
+    }
+  };
 
   // 导出处理函数
   const handleExportFDF = () => {
@@ -431,6 +445,12 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         action: handleSaveAs
       },
       { separator: true },
+      {
+        label: '导入',
+        submenu: [
+          { label: '导入 FDF', action: handleImportFDF }
+        ]
+      },
       {
         label: '导出',
         submenu: [

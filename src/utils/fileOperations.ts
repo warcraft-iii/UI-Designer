@@ -2,6 +2,7 @@ import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { ProjectData, FrameData } from '../types';
 import { createDefaultAnchors } from './anchorUtils';
+import { parseFDF } from './fdfParser';
 
 // 数据迁移: 将旧版本的单锚点数据转换为锚点数组
 function migrateProjectData(project: ProjectData): ProjectData {
@@ -143,3 +144,33 @@ export async function exportCode(code: string, language: 'jass' | 'lua' | 'ts'):
     throw error;
   }
 }
+
+/**
+ * 从FDF文件导入控件
+ */
+export async function importFromFDF(): Promise<FrameData[] | null> {
+  try {
+    // 打开FDF文件选择对话框
+    const path = await open({
+      filters: [{
+        name: 'Frame Definition File',
+        extensions: ['fdf']
+      }],
+      multiple: false
+    });
+    
+    if (!path || Array.isArray(path)) return null;
+    
+    // 读取FDF文件内容
+    const fdfContent = await readTextFile(path);
+    
+    // 解析FDF为FrameData数组
+    const frames = parseFDF(fdfContent);
+    
+    return frames;
+  } catch (error) {
+    console.error('FDF导入失败:', error);
+    throw error;
+  }
+}
+
