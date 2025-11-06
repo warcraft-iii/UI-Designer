@@ -17,6 +17,12 @@ const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
 const MARGIN = 240; // 4:3区域边距
 
+// 辅助函数：将RGBA数组转换为CSS颜色字符串
+const rgbaToCSS = (rgba: [number, number, number, number] | undefined): string | undefined => {
+  if (!rgba) return undefined;
+  return `rgba(${rgba[0]}, ${rgba[1]}, ${rgba[2]}, ${rgba[3] / 255})`;
+};
+
 export interface CanvasHandle {
   setScale: (scale: number | ((prev: number) => number)) => void;
   centerCanvas: () => void;
@@ -774,9 +780,16 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       display: 'flex',
       alignItems: frame.verAlign === 'start' ? 'flex-start' : frame.verAlign === 'center' ? 'center' : 'flex-end',
       justifyContent: frame.horAlign === 'left' ? 'flex-start' : frame.horAlign === 'center' ? 'center' : 'flex-end',
-      fontSize: `${(frame.textScale || 1) * 14}px`,
+      fontSize: frame.fontSize ? `${frame.fontSize}px` : `${(frame.textScale || 1) * 14}px`,
+      fontFamily: frame.font || undefined,
+      fontWeight: frame.fontFlags?.includes('BOLD') ? 'bold' : undefined,
+      fontStyle: frame.fontFlags?.includes('ITALIC') ? 'italic' : undefined,
+      textDecoration: frame.fontFlags?.includes('UNDERLINE') ? 'underline' : frame.fontFlags?.includes('STRIKEOUT') ? 'line-through' : undefined,
+      textShadow: frame.fontShadowColor && frame.fontShadowOffset 
+        ? `${frame.fontShadowOffset[0]}px ${frame.fontShadowOffset[1]}px 2px ${rgbaToCSS(frame.fontShadowColor)}`
+        : undefined,
       pointerEvents: 'auto',
-      opacity: isLockedOrParentLocked ? 0.7 : 1,
+      opacity: (isLockedOrParentLocked ? 0.7 : 1) * (frame.alpha ?? 1),
       boxShadow: isHighlighted ? '0 0 10px rgba(0, 170, 255, 0.5)' : undefined,  // 添加发光效果
     };
 
@@ -804,7 +817,39 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         }}
         title={frame.name}
       >
-        {frame.text && <span>{frame.text}</span>}
+        {frame.text && (
+          <span 
+            className={`frame-text ${
+              [FrameType.BUTTON, FrameType.GLUETEXTBUTTON, FrameType.GLUEBUTTON, 
+               FrameType.SIMPLEBUTTON, FrameType.CHECKBOX].includes(frame.type) 
+                ? 'frame-text-hoverable' 
+                : ''
+            }`}
+            style={{
+              color: frame.type === FrameType.EDITBOX && frame.editTextColor 
+                ? rgbaToCSS(frame.editTextColor) 
+                : undefined,
+              // 为可交互控件添加hover颜色变量
+              ['--hover-color' as string]: frame.fontHighlightColor 
+                ? rgbaToCSS(frame.fontHighlightColor) 
+                : undefined,
+            }}
+          >
+            {frame.text}
+          </span>
+        )}
+        
+        {/* EDITBOX 光标和边框样式 */}
+        {frame.type === FrameType.EDITBOX && isSelected && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderColor: frame.editBorderColor ? rgbaToCSS(frame.editBorderColor) : undefined,
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            pointerEvents: 'none',
+          }} />
+        )}
         
         {/* 锁定图标 */}
         {isLockedOrParentLocked && (

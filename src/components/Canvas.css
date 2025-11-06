@@ -30,6 +30,12 @@
   border-color: #3498db !important;
 }
 
+/* 文字hover效果支持 */
+.frame-text-hoverable:hover {
+  color: var(--hover-color) !important;
+  transition: color 0.15s ease;
+}
+
 .canvas-controls {
   position: absolute;
   bottom: 20px;
