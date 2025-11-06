@@ -2,7 +2,9 @@ import React from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { FrameType, FramePoint, ProjectData, FrameAnchor } from '../types';
 import { createDefaultAnchors, updateAnchorsFromBounds, calculateRelativeOffset, calculatePositionFromAnchors, detectAnchorConflicts } from '../utils/anchorUtils';
+import { ColorPicker, Select, MultiSelect, Slider, Switch, FilePath, VectorEditor, TextArea } from './PropertyEditors';
 import './PropertiesPanel.css';
+import './PropertyEditors.css';
 
 interface PropertiesPanelProps {
   onClose: () => void;
@@ -371,42 +373,28 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
       <section>
         <h4>显示控制</h4>
         
-        <div className="form-group">
-          <label>透明度 (Alpha)</label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={selectedFrame.alpha ?? 1}
-            onChange={(e) => handleChange('alpha', parseFloat(e.target.value))}
-          />
-          <span style={{ marginLeft: '8px', fontSize: '12px' }}>
-            {((selectedFrame.alpha ?? 1) * 100).toFixed(0)}%
-          </span>
-        </div>
+        <Slider
+          label="透明度 (Alpha)"
+          value={selectedFrame.alpha ?? 1}
+          onChange={(value) => handleChange('alpha', value)}
+          min={0}
+          max={1}
+          step={0.01}
+          unit="%"
+          showInput={true}
+        />
 
-        <div className="form-group checkbox">
-          <label>
-            <input
-              type="checkbox"
-              checked={selectedFrame.visible ?? true}
-              onChange={(e) => handleChange('visible', e.target.checked)}
-            />
-            可见
-          </label>
-        </div>
+        <Switch
+          label="可见"
+          value={selectedFrame.visible ?? true}
+          onChange={(value) => handleChange('visible', value)}
+        />
 
-        <div className="form-group checkbox">
-          <label>
-            <input
-              type="checkbox"
-              checked={selectedFrame.locked ?? false}
-              onChange={(e) => handleChange('locked', e.target.checked)}
-            />
-            锁定（不可编辑）
-          </label>
-        </div>
+        <Switch
+          label="锁定（不可编辑）"
+          value={selectedFrame.locked ?? false}
+          onChange={(value) => handleChange('locked', value)}
+        />
       </section>
 
       {/* 坐标和大小 */}
@@ -863,30 +851,25 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Alpha模式</label>
-              <select
-                value={selectedFrame.alphaMode || ''}
-                onChange={(e) => handleChange('alphaMode', e.target.value || undefined)}
-              >
-                <option value="">默认</option>
-                <option value="BLEND">BLEND</option>
-                <option value="ALPHAKEY">ALPHAKEY</option>
-                <option value="ADD">ADD</option>
-                <option value="MOD">MOD</option>
-              </select>
-            </div>
+            <Select
+              label="Alpha模式"
+              value={selectedFrame.alphaMode || ''}
+              onChange={(value) => handleChange('alphaMode', value || undefined)}
+              options={[
+                { value: '', label: '默认' },
+                { value: 'BLEND', label: 'BLEND' },
+                { value: 'ALPHAKEY', label: 'ALPHAKEY' },
+                { value: 'ADD', label: 'ADD' },
+                { value: 'MOD', label: 'MOD' },
+              ]}
+              allowClear
+            />
 
-            <div className="form-group checkbox">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={selectedFrame.decorateFileNames ?? false}
-                  onChange={(e) => handleChange('decorateFileNames', e.target.checked)}
-                />
-                装饰文件名
-              </label>
-            </div>
+            <Switch
+              label="装饰文件名"
+              value={selectedFrame.decorateFileNames ?? false}
+              onChange={(value) => handleChange('decorateFileNames', value)}
+            />
           </details>
         </section>
       )}
@@ -949,43 +932,42 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
             </div>
           </div>
 
-          <div className="form-group">
-            <label>字体</label>
-            <input
-              type="text"
-              value={selectedFrame.font || ''}
-              onChange={(e) => handleChange('font', e.target.value)}
-              placeholder="例如: Fonts\\FZKATJW.TTF"
-            />
-          </div>
+          <FilePath
+            label="字体"
+            value={selectedFrame.font || ''}
+            onChange={(value) => handleChange('font', value)}
+            placeholder="例如: Fonts\\FZKATJW.TTF"
+            suggestions={[
+              'Fonts\\FZKATJW.TTF',
+              'Fonts\\FZCHENGJW.TTF',
+              'Fonts\\FZYOUJW.TTF',
+              'Fonts\\DFPShaoNvW5-GB.ttf',
+            ]}
+          />
 
-          <div className="form-group">
-            <label>字体大小</label>
-            <input
-              type="number"
-              step="1"
-              value={selectedFrame.fontSize ?? ''}
-              onWheel={handleNumberInputWheel}
-              onChange={(e) => {
-                const val = e.target.value;
-                handleChange('fontSize', val ? parseFloat(val) : undefined);
-              }}
-              placeholder="默认字体大小"
-            />
-          </div>
+          <Slider
+            label="字体大小"
+            value={selectedFrame.fontSize ?? 12}
+            onChange={(value) => handleChange('fontSize', value)}
+            min={8}
+            max={72}
+            step={1}
+            showInput={true}
+            unit="px"
+          />
 
-          <div className="form-group">
-            <label>字体标记</label>
-            <input
-              type="text"
-              value={selectedFrame.fontFlags?.join(', ') || ''}
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                handleChange('fontFlags', val ? val.split(/[,\s]+/).filter(Boolean) : undefined);
-              }}
-              placeholder="例如: BOLD, ITALIC (用逗号分隔)"
-            />
-          </div>
+          <MultiSelect
+            label="字体标记"
+            value={selectedFrame.fontFlags || []}
+            onChange={(value) => handleChange('fontFlags', value && value.length > 0 ? value : undefined)}
+            options={[
+              { value: 'BOLD', label: 'BOLD (粗体)' },
+              { value: 'ITALIC', label: 'ITALIC (斜体)' },
+              { value: 'UNDERLINE', label: 'UNDERLINE (下划线)' },
+              { value: 'STRIKEOUT', label: 'STRIKEOUT (删除线)' },
+            ]}
+            placeholder="选择字体样式"
+          />
 
           <details style={{ marginBottom: '12px' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '8px' }}>
@@ -1474,51 +1456,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
         <section>
           <h4>编辑框颜色设置</h4>
           
-          <div className="form-group">
-            <label>编辑文本颜色 (RGBA)</label>
-            <div className="form-row">
-              <input type="number" step="0.01" min="0" max="1" placeholder="R"
-                value={selectedFrame.editTextColor?.[0] ?? ''}
-                onWheel={handleNumberInputWheel}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const arr = selectedFrame.editTextColor || [1, 1, 1, 1];
-                  arr[0] = val ? parseFloat(val) : 1;
-                  handleChange('editTextColor', [...arr]);
-                }}
-              />
-              <input type="number" step="0.01" min="0" max="1" placeholder="G"
-                value={selectedFrame.editTextColor?.[1] ?? ''}
-                onWheel={handleNumberInputWheel}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const arr = selectedFrame.editTextColor || [1, 1, 1, 1];
-                  arr[1] = val ? parseFloat(val) : 1;
-                  handleChange('editTextColor', [...arr]);
-                }}
-              />
-              <input type="number" step="0.01" min="0" max="1" placeholder="B"
-                value={selectedFrame.editTextColor?.[2] ?? ''}
-                onWheel={handleNumberInputWheel}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const arr = selectedFrame.editTextColor || [1, 1, 1, 1];
-                  arr[2] = val ? parseFloat(val) : 1;
-                  handleChange('editTextColor', [...arr]);
-                }}
-              />
-              <input type="number" step="0.01" min="0" max="1" placeholder="A"
-                value={selectedFrame.editTextColor?.[3] ?? ''}
-                onWheel={handleNumberInputWheel}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const arr = selectedFrame.editTextColor || [1, 1, 1, 1];
-                  arr[3] = val ? parseFloat(val) : 1;
-                  handleChange('editTextColor', [...arr]);
-                }}
-              />
-            </div>
-          </div>
+          <ColorPicker
+            label="编辑文本颜色 (RGBA)"
+            value={selectedFrame.editTextColor || [1, 1, 1, 1]}
+            onChange={(value) => handleChange('editTextColor', value)}
+          />
 
           <div className="form-group">
             <label>光标颜色 (RGBA)</label>

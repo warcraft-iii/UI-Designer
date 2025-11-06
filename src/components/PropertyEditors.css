@@ -1,0 +1,491 @@
+/* ==================== 基础属性编辑器样式 ==================== */
+
+.property-editor {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.property-editor > label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ccc;
+  display: block;
+}
+
+/* ==================== 颜色选择器 ==================== */
+
+.color-picker-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-preview {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: 2px solid #444;
+  cursor: pointer;
+  overflow: hidden;
+  background-image: 
+    linear-gradient(45deg, #808080 25%, transparent 25%), 
+    linear-gradient(-45deg, #808080 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #808080 75%), 
+    linear-gradient(-45deg, transparent 75%, #808080 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+.color-preview input[type="color"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.color-values {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.color-hex {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: #4a9eff;
+  font-weight: 500;
+}
+
+.alpha-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alpha-control label {
+  font-size: 11px;
+  color: #999;
+  min-width: 12px;
+}
+
+.alpha-control input[type="range"] {
+  flex: 1;
+  height: 4px;
+  background: linear-gradient(to right, transparent 0%, currentColor 100%);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.alpha-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4a9eff;
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.alpha-control input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4a9eff;
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.alpha-value {
+  font-size: 11px;
+  color: #999;
+  min-width: 35px;
+  text-align: right;
+}
+
+/* ==================== 下拉选择器 ==================== */
+
+.select-editor select {
+  width: 100%;
+  padding: 6px 10px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.select-editor select:hover {
+  border-color: #4a9eff;
+}
+
+.select-editor select:focus {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.1);
+}
+
+/* ==================== 多选下拉框 ==================== */
+
+.multi-select-container {
+  position: relative;
+}
+
+.multi-select-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-height: 32px;
+}
+
+.multi-select-display:hover {
+  border-color: #4a9eff;
+}
+
+.multi-select-display.open {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.1);
+}
+
+.selected-text {
+  flex: 1;
+  font-size: 13px;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-select-display .selected-text:empty::before {
+  content: attr(placeholder);
+  color: #666;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: #999;
+  transition: transform 0.2s;
+}
+
+.multi-select-display.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.multi-select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background-color: #2a2a2a;
+  border: 1px solid #4a9eff;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 13px;
+  color: #fff;
+}
+
+.multi-select-option:hover {
+  background-color: #333;
+}
+
+.multi-select-option input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+/* ==================== 滑块 ==================== */
+
+.slider-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-track-container {
+  flex: 1;
+}
+
+.slider-track-container input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.slider-track-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4a9eff;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider-track-container input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4a9eff;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider-value-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.slider-value-input input[type="number"] {
+  width: 60px;
+  padding: 4px 6px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.slider-value-input .unit {
+  font-size: 11px;
+  color: #999;
+}
+
+/* ==================== 开关 ==================== */
+
+.switch-editor {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: #444;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.switch.on {
+  background-color: #4a9eff;
+}
+
+.switch.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switch-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.switch.on .switch-slider {
+  transform: translateX(20px);
+}
+
+.switch-label {
+  font-size: 12px;
+  color: #999;
+  min-width: 24px;
+}
+
+/* ==================== 文件路径选择器 ==================== */
+
+.filepath-input-container {
+  position: relative;
+}
+
+.filepath-input-container input {
+  width: 100%;
+  padding: 6px 10px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.filepath-input-container input:focus {
+  border-color: #4a9eff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.1);
+}
+
+.filepath-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background-color: #2a2a2a;
+  border: 1px solid #4a9eff;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.filepath-suggestion-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  color: #ccc;
+}
+
+.filepath-suggestion-item:hover {
+  background-color: #333;
+  color: #4a9eff;
+}
+
+/* ==================== 向量编辑器 ==================== */
+
+.vector-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.vector-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vector-label {
+  font-size: 11px;
+  color: #999;
+  font-weight: 500;
+}
+
+.vector-input-group input[type="number"] {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.vector-input-group input[type="number"]:focus {
+  border-color: #4a9eff;
+  outline: none;
+}
+
+/* ==================== 文本区域 ==================== */
+
+.textarea-editor textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.textarea-editor textarea:focus {
+  border-color: #4a9eff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.1);
+}
+
+/* ==================== 滚动条样式 ==================== */
+
+.multi-select-dropdown::-webkit-scrollbar,
+.filepath-suggestions::-webkit-scrollbar,
+.textarea-editor textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.multi-select-dropdown::-webkit-scrollbar-track,
+.filepath-suggestions::-webkit-scrollbar-track,
+.textarea-editor textarea::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.multi-select-dropdown::-webkit-scrollbar-thumb,
+.filepath-suggestions::-webkit-scrollbar-thumb,
+.textarea-editor textarea::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+.multi-select-dropdown::-webkit-scrollbar-thumb:hover,
+.filepath-suggestions::-webkit-scrollbar-thumb:hover,
+.textarea-editor textarea::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ==================== 响应式 ==================== */
+
+@media (max-width: 768px) {
+  .color-picker-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .slider-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .slider-value-input {
+    justify-content: center;
+  }
+}
