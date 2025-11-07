@@ -86,6 +86,10 @@ export const useKeyboardShortcuts = (
             e.preventDefault();
             clearGuides();
             break;
+          case ',':
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('openPreferences'));
+            break;
         }
       }
 

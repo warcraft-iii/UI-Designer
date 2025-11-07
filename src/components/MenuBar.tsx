@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './MenuBar.css';
 import { AboutDialog } from './AboutDialog';
+import { PreferencesDialog } from './PreferencesDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
@@ -68,6 +69,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
 }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTargets, setDeleteTargets] = useState<string[]>([]);
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
@@ -191,6 +193,13 @@ export const MenuBar: React.FC<MenuBarProps> = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showProjectTree, showPropertiesPanel, setShowProjectTree, setShowPropertiesPanel]);
+
+  // 监听首选项快捷键事件
+  useEffect(() => {
+    const handleOpenPreferences = () => setShowPreferences(true);
+    window.addEventListener('openPreferences', handleOpenPreferences);
+    return () => window.removeEventListener('openPreferences', handleOpenPreferences);
+  }, []);
 
   const handleMenuClick = (menuName: string) => {
     setActiveMenu(activeMenu === menuName ? null : menuName);
@@ -572,6 +581,12 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           // TODO: 实现全选
           console.log('Select All');
         }
+      },
+      { separator: true },
+      {
+        label: '首选项...',
+        shortcut: 'Ctrl+,',
+        action: () => setShowPreferences(true)
       }
     ],
     view: [
@@ -675,9 +690,9 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       },
       { separator: true },
       {
-        label: '首选项',
+        label: '首选项...',
         shortcut: 'Ctrl+,',
-        action: () => console.log('Preferences')
+        action: () => setShowPreferences(true)
       }
     ],
     help: [
@@ -801,6 +816,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       </div>
 
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+      {showPreferences && <PreferencesDialog onClose={() => setShowPreferences(false)} />}
       
       {showDeleteConfirm && (
         <ConfirmDialog
