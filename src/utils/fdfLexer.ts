@@ -160,7 +160,10 @@ export class FDFLexer {
           case '\\': value += '\\'; break;
           case '"': value += '"'; break;
           case "'": value += "'"; break;
-          default: value += escaped;
+          default: 
+            // 对于未知的转义序列,保留反斜杠和字符
+            // 这样 "\C" 会被保留为 "\C",用于文件路径
+            value += '\\' + escaped;
         }
       } else {
         value += this.advance();
