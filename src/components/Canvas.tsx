@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
@@ -11,6 +11,7 @@ import { AnchorVisualizer } from './AnchorVisualizer';
 import { Ruler } from './Ruler';
 import { GuideLine } from './GuideLine';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
+import { useTextureLoaderBatch } from '../hooks/useTextureLoader';
 import './Canvas.css';
 
 const CANVAS_WIDTH = 1920;
@@ -79,6 +80,19 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   // 网格吸附状态
   const [snapToGrid, setSnapToGrid] = React.useState(true);
   const [gridSize, setGridSize] = React.useState(0.01); // WC3单位，默认0.01
+  
+  // 收集所有需要加载的纹理路径
+  const texturePaths = useMemo(() => {
+    const paths: string[] = [];
+    Object.values(project.frames).forEach(frame => {
+      if (frame.diskTexture) paths.push(frame.diskTexture);
+      if (frame.wc3Texture) paths.push(frame.wc3Texture);
+    });
+    return paths;
+  }, [project.frames]);
+  
+  // 批量加载纹理
+  const textureMap = useTextureLoaderBatch(texturePaths);
   
   // 吸附到网格的辅助函数
   const snapValue = (value: number, gridSize: number): number => {
@@ -786,7 +800,25 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       cursor: isLockedOrParentLocked ? 'not-allowed' : 'pointer',
       zIndex: frame.z,
       backgroundColor: getFrameBackgroundColor(frame.type),
-      backgroundImage: frame.diskTexture ? `url(${frame.diskTexture})` : undefined,
+      backgroundImage: (() => {
+        // 优先使用diskTexture,如果没有则使用wc3Texture
+        const texturePath = frame.diskTexture || frame.wc3Texture;
+        if (!texturePath) return undefined;
+        
+        // 如果纹理已加载,使用加载后的URL
+        const textureState = textureMap.get(texturePath);
+        if (textureState && textureState.url) {
+          return `url(${textureState.url})`;
+        }
+        
+        // 如果是Data URL或HTTP URL,直接使用
+        if (texturePath.startsWith('data:') || texturePath.startsWith('http://') || texturePath.startsWith('https://')) {
+          return `url(${texturePath})`;
+        }
+        
+        // 否则返回undefined,等待加载
+        return undefined;
+      })(),
       backgroundSize: 'cover',
       color: frame.textColor || '#ffffff',
       display: 'flex',
