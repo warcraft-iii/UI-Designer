@@ -1145,11 +1145,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
           />
 
           <VectorEditor
-            label="背景内边距 (上, 右, 下, 左)"
+            label="背景内边距 (左, 上, 右, 下)"
             value={selectedFrame.backdropBackgroundInsets || [0, 0, 0, 0]}
             onChange={(value) => handleChange('backdropBackgroundInsets', value)}
             dimensions={4}
-            labels={['上', '右', '下', '左']}
+            labels={['左', '上', '右', '下']}
             step={0.001}
           />
 

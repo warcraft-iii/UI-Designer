@@ -86,12 +86,9 @@ export const BackdropEdge: React.FC<BackdropEdgeProps> = ({
     <div
       style={{
         position: 'absolute',
-        top: -cornerSizePx,
-        left: -cornerSizePx,
-        right: -cornerSizePx,
-        bottom: -cornerSizePx,
+        inset: 0,
         pointerEvents: 'none',
-        zIndex: -1,
+        zIndex: 1,
       }}
     >
       {/* 左上角 */}
@@ -168,8 +165,9 @@ export const BackdropEdge: React.FC<BackdropEdgeProps> = ({
             right: cornerSizePx,
             height: cornerSizePx,
             backgroundImage: `url(${getTexture('T')})`,
-            backgroundSize: `${cornerSizePx}px ${cornerSizePx}px`,
+            backgroundSize: `auto ${cornerSizePx}px`,
             backgroundRepeat: 'repeat-x',
+            backgroundPosition: 'left top',
           }}
         />
       )}
@@ -184,8 +182,9 @@ export const BackdropEdge: React.FC<BackdropEdgeProps> = ({
             right: cornerSizePx,
             height: cornerSizePx,
             backgroundImage: `url(${getTexture('B')})`,
-            backgroundSize: `${cornerSizePx}px ${cornerSizePx}px`,
+            backgroundSize: `auto ${cornerSizePx}px`,
             backgroundRepeat: 'repeat-x',
+            backgroundPosition: 'left top',
           }}
         />
       )}
@@ -200,8 +199,9 @@ export const BackdropEdge: React.FC<BackdropEdgeProps> = ({
             left: 0,
             width: cornerSizePx,
             backgroundImage: `url(${getTexture('L')})`,
-            backgroundSize: `${cornerSizePx}px ${cornerSizePx}px`,
+            backgroundSize: `${cornerSizePx}px auto`,
             backgroundRepeat: 'repeat-y',
+            backgroundPosition: 'left top',
           }}
         />
       )}
@@ -216,8 +216,9 @@ export const BackdropEdge: React.FC<BackdropEdgeProps> = ({
             right: 0,
             width: cornerSizePx,
             backgroundImage: `url(${getTexture('R')})`,
-            backgroundSize: `${cornerSizePx}px ${cornerSizePx}px`,
+            backgroundSize: `${cornerSizePx}px auto`,
             backgroundRepeat: 'repeat-y',
+            backgroundPosition: 'left top',
           }}
         />
       )}

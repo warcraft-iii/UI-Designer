@@ -10,30 +10,59 @@ export interface SubTextureLayout {
 }
 
 /**
- * 默认边框纹理图集布局
+ * 默认边框纹理图集布局 (3x3)
  * WC3 标准布局：8个部件在 256x256 或 512x512 纹理中
+ * 
+ * 网格布局：
+ * [UL] [T ] [UR]
+ * [L ] [  ] [R ]
+ * [BL] [B ] [BR]
  */
 export const DEFAULT_BORDER_LAYOUT: SubTextureLayout = {
   UL: [0, 0],  // 左上角
-  UR: [1, 0],  // 右上角
-  BL: [0, 1],  // 左下角
-  BR: [1, 1],  // 右下角
-  T:  [2, 0],  // 顶边
-  L:  [0, 2],  // 左边
-  B:  [2, 1],  // 底边
-  R:  [1, 2],  // 右边
+  T:  [1, 0],  // 顶边
+  UR: [2, 0],  // 右上角
+  L:  [0, 1],  // 左边
+  R:  [2, 1],  // 右边
+  BL: [0, 2],  // 左下角
+  B:  [1, 2],  // 底边
+  BR: [2, 2],  // 右下角
+};
+
+/**
+ * 替代布局：水平排列 8x1
+ * 
+ * WC3 实际使用的布局（human-options-menu-border.blp）
+ * 从左到右水平排列（512x64，每个子纹理64x64）：
+ * [L] [R] [T] [B] [UL] [UR] [BL] [BR]
+ */
+export const HORIZONTAL_BORDER_LAYOUT: SubTextureLayout = {
+  L:  [0, 0],  // 索引0: 左边
+  R:  [1, 0],  // 索引1: 右边
+  T:  [2, 0],  // 索引2: 顶边
+  B:  [3, 0],  // 索引3: 底边
+  UL: [4, 0],  // 索引4: 左上角
+  UR: [5, 0],  // 索引5: 右上角
+  BL: [6, 0],  // 索引6: 左下角
+  BR: [7, 0],  // 索引7: 右下角
 };
 
 /**
  * 替代布局：紧凑型 2x4
+ * 
+ * 网格布局：
+ * [L ] [R ]  <- 行0: 左右边缘
+ * [T ] [B ]  <- 行1: 上下边缘
+ * [UL] [UR]  <- 行2: 上角
+ * [BL] [BR]  <- 行3: 下角
  */
 export const COMPACT_BORDER_LAYOUT: SubTextureLayout = {
-  UL: [0, 0],
-  UR: [1, 0],
+  L:  [0, 0],
+  R:  [1, 0],
   T:  [0, 1],
   B:  [1, 1],
-  L:  [0, 2],
-  R:  [1, 2],
+  UL: [0, 2],
+  UR: [1, 2],
   BL: [0, 3],
   BR: [1, 3],
 };
@@ -66,6 +95,10 @@ export class TextureAtlasSplitter {
 
     // 加载源图像
     const img = await this.loadImage(textureDataURL);
+    
+    console.log('[TextureAtlas] 源图像尺寸:', img.width, 'x', img.height);
+    console.log('[TextureAtlas] 子纹理尺寸:', subSize);
+    console.log('[TextureAtlas] 使用布局:', layout);
 
     // 创建临时 canvas 用于提取子纹理
     const canvas = document.createElement('canvas');
@@ -88,11 +121,31 @@ export class TextureAtlasSplitter {
       const sourceY = gridY * subSize;
 
       try {
-        ctx.drawImage(
-          img,
-          sourceX, sourceY, subSize, subSize,  // 源区域
-          0, 0, subSize, subSize               // 目标区域
-        );
+        // 对于顶边(T)和底边(B)，需要旋转90度
+        const needsRotation = flag === 'T' || flag === 'B';
+        
+        if (needsRotation) {
+          // 保存当前状态
+          ctx.save();
+          // 移动到中心点
+          ctx.translate(subSize / 2, subSize / 2);
+          // 旋转90度
+          ctx.rotate(90 * Math.PI / 180);
+          // 绘制图像（从中心点偏移）
+          ctx.drawImage(
+            img,
+            sourceX, sourceY, subSize, subSize,  // 源区域
+            -subSize / 2, -subSize / 2, subSize, subSize  // 目标区域（从中心点偏移）
+          );
+          // 恢复状态
+          ctx.restore();
+        } else {
+          ctx.drawImage(
+            img,
+            sourceX, sourceY, subSize, subSize,  // 源区域
+            0, 0, subSize, subSize               // 目标区域
+          );
+        }
 
         // 转换为 Data URL
         const dataURL = canvas.toDataURL('image/png');
@@ -110,7 +163,7 @@ export class TextureAtlasSplitter {
 
   /**
    * 智能检测布局
-   * 尝试不同的布局和尺寸，找到最佳匹配
+   * 根据图像实际尺寸自动检测最佳布局
    */
   async detectLayout(textureDataURL: string): Promise<{
     layout: SubTextureLayout;
@@ -118,30 +171,42 @@ export class TextureAtlasSplitter {
   }> {
     const img = await this.loadImage(textureDataURL);
 
-    // 常见的子纹理尺寸
-    const commonSizes = [64, 32, 128, 16];
+    console.log('[TextureAtlas] 检测纹理尺寸:', img.width, 'x', img.height);
 
-    for (const size of commonSizes) {
-      // 检查图像尺寸是否匹配
-      if (img.width >= size * 3 && img.height >= size * 3) {
-        // 标准布局（3x3网格）
-        return {
-          layout: DEFAULT_BORDER_LAYOUT,
-          subSize: size,
-        };
-      } else if (img.width >= size * 2 && img.height >= size * 4) {
-        // 紧凑布局（2x4网格）
-        return {
-          layout: COMPACT_BORDER_LAYOUT,
-          subSize: size,
-        };
-      }
+    // 检查是否是水平排列 8x1（宽:高 = 8:1）
+    const aspectRatio = img.width / img.height;
+    
+    if (aspectRatio >= 7 && aspectRatio <= 9) {
+      // 8x1 水平布局：512x64 或类似比例
+      const subSize = img.height; // 子纹理是正方形，边长 = 高度
+      console.log('[TextureAtlas] 检测为 8x1 水平布局，子纹理尺寸:', subSize);
+      return {
+        layout: HORIZONTAL_BORDER_LAYOUT,
+        subSize: subSize,
+      };
+    } else if (aspectRatio >= 0.4 && aspectRatio <= 0.6) {
+      // 2x4 布局：宽度是高度的一半
+      const subSize = img.width / 2;
+      console.log('[TextureAtlas] 检测为 2x4 布局，子纹理尺寸:', subSize);
+      return {
+        layout: COMPACT_BORDER_LAYOUT,
+        subSize: subSize,
+      };
+    } else if (aspectRatio >= 0.9 && aspectRatio <= 1.1) {
+      // 3x3 布局：正方形
+      const subSize = img.width / 3;
+      console.log('[TextureAtlas] 检测为 3x3 布局，子纹理尺寸:', subSize);
+      return {
+        layout: DEFAULT_BORDER_LAYOUT,
+        subSize: subSize,
+      };
     }
 
-    // 默认返回标准布局
+    // 默认：尝试 3x3 布局
+    console.warn('[TextureAtlas] 未知布局比例:', aspectRatio, '使用默认 3x3');
     return {
       layout: DEFAULT_BORDER_LAYOUT,
-      subSize: 64,
+      subSize: Math.floor(img.width / 3),
     };
   }
 

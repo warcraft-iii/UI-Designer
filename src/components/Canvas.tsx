@@ -792,42 +792,41 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     // 检查控件或父控件是否锁定
     const isLockedOrParentLocked = isFrameOrParentLocked(frameId);
 
-    const style: React.CSSProperties = {
+    // 外层容器样式（定位和基础属性，不包含边框）
+    const containerStyle: React.CSSProperties = {
       position: 'absolute',
       left: `${left}px`,
       bottom: `${bottom}px`,
       width: `${width}px`,
       height: `${height}px`,
-      border: isLockedOrParentLocked 
-        ? '2px dashed #888888' 
-        : isSelected 
-          ? '2px solid #f22613' 
-          : isHighlighted 
-            ? '2px solid #00aaff'  // 搜索高亮：蓝色边框
-            : '1px solid #00e640',
-      boxSizing: 'border-box',
       cursor: isLockedOrParentLocked ? 'not-allowed' : 'pointer',
       zIndex: frame.z,
-      backgroundColor: getFrameBackgroundColor(frame.type),
-      backgroundImage: (() => {
-        // 优先使用diskTexture,如果没有则使用wc3Texture
-        const texturePath = frame.diskTexture || frame.wc3Texture;
-        if (!texturePath || typeof texturePath !== 'string') return undefined;
-        
-        // 如果纹理已加载,使用加载后的URL
-        const textureState = textureMap.get(texturePath);
-        if (textureState && textureState.url) {
-          return `url(${textureState.url})`;
-        }
-        
+      pointerEvents: 'auto',
+      opacity: (isLockedOrParentLocked ? 0.7 : 1) * (frame.alpha ?? 1),
+    };
+
+    // 优先使用diskTexture,如果没有则使用wc3Texture
+    const texturePath = frame.diskTexture || frame.wc3Texture;
+    let backgroundImage: string | undefined = undefined;
+    
+    if (texturePath && typeof texturePath === 'string') {
+      // 如果纹理已加载,使用加载后的URL
+      const textureState = textureMap.get(texturePath);
+      if (textureState && textureState.url) {
+        backgroundImage = `url(${textureState.url})`;
+      } else if (texturePath.startsWith('data:') || texturePath.startsWith('http://') || texturePath.startsWith('https://')) {
         // 如果是Data URL或HTTP URL,直接使用
-        if (texturePath.startsWith('data:') || texturePath.startsWith('http://') || texturePath.startsWith('https://')) {
-          return `url(${texturePath})`;
-        }
-        
-        // 否则返回undefined,等待加载
-        return undefined;
-      })(),
+        backgroundImage = `url(${texturePath})`;
+      }
+    }
+
+    // 内层内容样式
+    const contentStyle: React.CSSProperties = {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      backgroundColor: getFrameBackgroundColor(frame.type),
+      backgroundImage,
       backgroundSize: 'cover',
       color: frame.textColor || '#ffffff',
       display: 'flex',
@@ -841,9 +840,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       textShadow: frame.fontShadowColor && frame.fontShadowOffset 
         ? `${frame.fontShadowOffset[0]}px ${frame.fontShadowOffset[1]}px 2px ${rgbaToCSS(frame.fontShadowColor)}`
         : undefined,
-      pointerEvents: 'auto',
-      opacity: (isLockedOrParentLocked ? 0.7 : 1) * (frame.alpha ?? 1),
-      boxShadow: isHighlighted ? '0 0 10px rgba(0, 170, 255, 0.5)' : undefined,  // 添加发光效果
+      overflow: 'visible',
     };
 
     return (
@@ -851,7 +848,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         key={frameId}
         className="canvas-frame"
         data-frame-id={frameId}
-        style={style}
+        style={containerStyle}
         onMouseDown={(e) => {
           // 先处理选择逻辑（在拖拽开始之前）
           if (e.button === 0) { // 只处理左键
@@ -870,73 +867,141 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
         }}
         title={frame.name}
       >
-        {/* Backdrop 边框纹理 */}
-        {frame.backdropEdgeFile && frame.backdropCornerFlags && frame.backdropCornerSize && (
-          <BackdropEdge
-            edgeFile={frame.backdropEdgeFile}
-            cornerFlags={frame.backdropCornerFlags}
-            cornerSize={frame.backdropCornerSize}
-            backgroundInsets={frame.backdropBackgroundInsets}
-            textureDataURL={(() => {
-              const textureState = textureMap.get(frame.backdropEdgeFile);
-              return textureState?.url || undefined;
-            })()}
-            canvasWidth={CANVAS_WIDTH - 2 * MARGIN}
-          />
-        )}
-        
-        {frame.text && (
-          <span 
-            className={`frame-text ${
-              [FrameType.BUTTON, FrameType.GLUETEXTBUTTON, FrameType.GLUEBUTTON, 
-               FrameType.SIMPLEBUTTON, FrameType.CHECKBOX].includes(frame.type) 
-                ? 'frame-text-hoverable' 
-                : ''
-            }`}
-            style={{
-              color: frame.type === FrameType.EDITBOX && frame.editTextColor 
-                ? rgbaToCSS(frame.editTextColor) 
-                : undefined,
-              // 为可交互控件添加hover颜色变量
-              ['--hover-color' as string]: frame.fontHighlightColor 
-                ? rgbaToCSS(frame.fontHighlightColor) 
-                : undefined,
-            }}
-          >
-            {frame.text}
-          </span>
-        )}
-        
-        {/* EDITBOX 光标和边框样式 */}
-        {frame.type === FrameType.EDITBOX && isSelected && (
-          <div style={{
+        {/* 选择框 - 最外层，不受内容影响 */}
+        <div
+          style={{
             position: 'absolute',
             inset: 0,
-            borderColor: frame.editBorderColor ? rgbaToCSS(frame.editBorderColor) : undefined,
-            borderWidth: '1px',
-            borderStyle: 'solid',
+            border: isLockedOrParentLocked 
+              ? '2px dashed #888888' 
+              : isSelected 
+                ? '2px solid #f22613' 
+                : isHighlighted 
+                  ? '2px solid #00aaff'
+                  : '1px solid #00e640',
+            boxSizing: 'border-box',
             pointerEvents: 'none',
-          }} />
-        )}
-        
-        {/* 锁定图标 */}
-        {isLockedOrParentLocked && (
-          <div style={{
-            position: 'absolute',
-            top: '2px',
-            right: '2px',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            color: '#888888',
-            padding: '2px 4px',
-            fontSize: '12px',
-            borderRadius: '2px',
-            pointerEvents: 'none',
-          }}>
-            🔒
+            boxShadow: isHighlighted ? '0 0 10px rgba(0, 170, 255, 0.5)' : undefined,
+          }}
+        />
+
+        {/* Backdrop 背景和边框容器 */}
+        {(frame.backdropBackground || frame.backdropEdgeFile) && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Backdrop 背景纹理（带内边距） */}
+            {frame.backdropBackground && (
+              <div
+                style={{
+                  position: 'absolute',
+                  // backdropBackgroundInsets 格式: [left, top, right, bottom]
+                  // 左右使用横向比例 0.8，上下使用纵向比例 0.6
+                  left: frame.backdropBackgroundInsets 
+                    ? `${(frame.backdropBackgroundInsets[0] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}px`
+                    : 0,
+                  top: frame.backdropBackgroundInsets 
+                    ? `${(frame.backdropBackgroundInsets[1] / 0.6) * CANVAS_HEIGHT}px`
+                    : 0,
+                  right: frame.backdropBackgroundInsets 
+                    ? `${(frame.backdropBackgroundInsets[2] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}px`
+                    : 0,
+                  bottom: frame.backdropBackgroundInsets 
+                    ? `${(frame.backdropBackgroundInsets[3] / 0.6) * CANVAS_HEIGHT}px`
+                    : 0,
+                  backgroundImage: (() => {
+                    const textureState = textureMap.get(frame.backdropBackground);
+                    return textureState?.url ? `url(${textureState.url})` : undefined;
+                  })(),
+                  backgroundSize: frame.backdropTileBackground 
+                    ? (frame.backdropBackgroundSize 
+                        ? `${(frame.backdropBackgroundSize / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}px` 
+                        : 'auto')
+                    : 'cover',
+                  backgroundRepeat: frame.backdropTileBackground ? 'repeat' : 'no-repeat',
+                  backgroundPosition: 'center center',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+
+            {/* Backdrop 边框纹理 */}
+            {frame.backdropEdgeFile && frame.backdropCornerFlags && frame.backdropCornerSize && (
+              <BackdropEdge
+                edgeFile={frame.backdropEdgeFile}
+                cornerFlags={frame.backdropCornerFlags}
+                cornerSize={frame.backdropCornerSize}
+                backgroundInsets={frame.backdropBackgroundInsets}
+                textureDataURL={(() => {
+                  const textureState = textureMap.get(frame.backdropEdgeFile);
+                  return textureState?.url || undefined;
+                })()}
+                canvasWidth={CANVAS_WIDTH - 2 * MARGIN}
+              />
+            )}
           </div>
         )}
+
+        {/* 内容层 */}
+        <div style={contentStyle}>
+          {frame.text && (
+            <span 
+              className={`frame-text ${
+                [FrameType.BUTTON, FrameType.GLUETEXTBUTTON, FrameType.GLUEBUTTON, 
+                 FrameType.SIMPLEBUTTON, FrameType.CHECKBOX].includes(frame.type) 
+                  ? 'frame-text-hoverable' 
+                  : ''
+              }`}
+              style={{
+                color: frame.type === FrameType.EDITBOX && frame.editTextColor 
+                  ? rgbaToCSS(frame.editTextColor) 
+                  : undefined,
+                // 为可交互控件添加hover颜色变量
+                ['--hover-color' as string]: frame.fontHighlightColor 
+                  ? rgbaToCSS(frame.fontHighlightColor) 
+                  : undefined,
+              }}
+            >
+              {frame.text}
+            </span>
+          )}
+          
+          {/* EDITBOX 光标和边框样式 */}
+          {frame.type === FrameType.EDITBOX && isSelected && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              borderColor: frame.editBorderColor ? rgbaToCSS(frame.editBorderColor) : undefined,
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              pointerEvents: 'none',
+            }} />
+          )}
+          
+          {/* 锁定图标 */}
+          {isLockedOrParentLocked && (
+            <div style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              color: '#888888',
+              padding: '2px 4px',
+              fontSize: '12px',
+              borderRadius: '2px',
+              pointerEvents: 'none',
+            }}>
+              🔒
+          </div>
+        )}
+        </div>
         
-        {/* 调整大小手柄 */}
+        {/* 调整大小手柄 - 在外层容器中，不受内容层影响 */}
         <ResizeHandles
           isSelected={isSelected && !isLockedOrParentLocked}
           onResizeStart={handleResizeStart(frameId)}
