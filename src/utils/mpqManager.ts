@@ -244,34 +244,34 @@ export class MPQManager {
           fileName: normalizedPath
         });
         
-        if (data && data.length > 0) {
-          // 只在成功时记录日志
-          // console.log(`[MPQManager] ✓ 从 ${archiveName} 读取: ${filePath}`);
-          
-          // 更新缓存
-          this.fileListCache.set(lowerPath, {
-            fileName: normalizedPath,
-            archiveName,
-            size: data.length,
-          });
-          
-          // 将数字数组转换为 ArrayBuffer
-          return new Uint8Array(data).buffer;
-        }
-      } catch (error: any) {
-        // 如果是内部错误，静默跳过
-        const errorMsg = error?.message || String(error);
-        if (errorMsg.includes('内部错误')) {
+          if (data && data.length > 0) {
+            // 只在成功时记录日志
+            // console.log(`[MPQManager] ✓ 从 ${archiveName} 读取: ${filePath}`);
+            
+            // 更新缓存
+            this.fileListCache.set(lowerPath, {
+              fileName: normalizedPath,
+              archiveName,
+              size: data.length,
+            });
+            
+            // 将数字数组转换为 ArrayBuffer
+            return new Uint8Array(data).buffer;
+          }
+        } catch (error: any) {
+          // 如果是内部错误，静默跳过
+          const errorMsg = error?.message || String(error);
+          if (errorMsg.includes('内部错误')) {
+            continue;
+          }
+          // 其他错误继续查找
           continue;
         }
-        // 其他错误继续查找
-        continue;
       }
-    }
-    
-    // 只在真正找不到时记录一次警告
-    // console.warn(`[MPQManager] 文件未找到: ${filePath}`);
-    return null;
+      
+      // 只在真正找不到时记录一次警告
+      // console.warn(`[MPQManager] 文件未找到: ${filePath}`);
+      return null;
   }
   
   /**

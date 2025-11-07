@@ -700,8 +700,31 @@ export async function decodeBLP(buffer: ArrayBuffer, mipLevel: number = 0): Prom
 
 /**
  * 快捷函数: 解码BLP为DataURL
+ * @param buffer BLP 数据
+ * @param mipLevel Mipmap 级别
+ * @param useRustBackend 是否使用 Rust 后端解码（更快，不阻塞 UI）
  */
-export async function decodeBLPToDataURL(buffer: ArrayBuffer, mipLevel: number = 0): Promise<string> {
+export async function decodeBLPToDataURL(
+  buffer: ArrayBuffer, 
+  mipLevel: number = 0,
+  useRustBackend: boolean = true
+): Promise<string> {
+  // 优先使用 Rust 后端解码
+  if (useRustBackend) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const uint8Array = new Uint8Array(buffer);
+      const dataUrl = await invoke<string>('decode_blp_to_png', {
+        blpData: Array.from(uint8Array)
+      });
+      return dataUrl;
+    } catch (error) {
+      // Rust 后端失败，回退到 JS 解码
+      console.warn('[BLP] Rust 后端解码失败，使用 JS 解码:', error);
+    }
+  }
+  
+  // 使用 JS 解码（回退方案）
   const imageData = await decodeBLP(buffer, mipLevel);
   
   // 创建Canvas

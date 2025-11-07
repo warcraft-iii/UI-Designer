@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { mpqManager } from '../utils/mpqManager';
 import { textureLoader } from '../utils/textureLoader';
+import { LazyTexturePreview } from './LazyTexturePreview';
 import './WC3TextureBrowser.css';
 
 interface WC3TextureBrowserProps {
@@ -33,7 +34,6 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPath, setSelectedPath] = useState(currentPath);
-  const [previewCache, setPreviewCache] = useState<Map<string, string>>(new Map());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [war3Path, setWar3Path] = useState<string>('');
   const [showPathSetting, setShowPathSetting] = useState(false);
@@ -312,20 +312,6 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
     }
   };
 
-  // 预加载纹理预览
-  const loadPreview = async (path: string) => {
-    if (previewCache.has(path)) return;
-
-    try {
-      const dataUrl = await textureLoader.loadTexture(path);
-      setPreviewCache(prev => new Map(prev).set(path, dataUrl));
-    } catch (error) {
-      // 静默失败，不记录日志（很多文件在 listfile 中但无法读取是正常的）
-      // 只在开发模式下记录详细错误
-      // console.error('Failed to load preview:', path, error);
-    }
-  };
-
   // 初始化：加载根目录或当前路径
   useEffect(() => {
     const initDir = currentPath 
@@ -334,14 +320,6 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
     setCurrentDirectory(initDir);
     loadDirectory(initDir);
   }, []);
-
-  // 预加载可见项的缩略图
-  useEffect(() => {
-    items
-      .filter(item => !item.isDirectory)
-      .slice(0, 20) // 只预加载前20个
-      .forEach(item => loadPreview(item.path));
-  }, [items]);
 
   const handleItemClick = (item: TextureItem) => {
     if (item.isDirectory) {
@@ -373,15 +351,17 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
     }
   };
 
-  // 打开图片预览
-  const handlePreviewImage = (item: TextureItem) => {
+  // 打开图片预览（异步加载）
+  const handlePreviewImage = async (item: TextureItem) => {
     if (!item.isDirectory) {
-      const cachedPreview = previewCache.get(item.path);
-      if (cachedPreview) {
-        setPreviewImage(cachedPreview);
+      try {
+        const dataUrl = await textureLoader.loadTexture(item.path);
+        setPreviewImage(dataUrl);
         setPreviewImageName(item.name);
         setPreviewZoom(1);
         setPreviewPosition({ x: 0, y: 0 });
+      } catch (error) {
+        console.error('加载预览图失败:', error);
       }
     }
   };
@@ -642,19 +622,14 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
                     {item.isDirectory ? (
                       <div className="directory-icon">📁</div>
                     ) : (
-                      <div 
-                        className="texture-preview"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePreviewImage(item);
-                        }}
-                        style={{ cursor: 'zoom-in' }}
-                      >
-                        {previewCache.has(item.path) ? (
-                          <img src={previewCache.get(item.path)} alt={item.name} />
-                        ) : (
-                          <div className="preview-placeholder">🖼️</div>
-                        )}
+                      <div onClick={(e) => {
+                        e.stopPropagation();
+                        handlePreviewImage(item);
+                      }}>
+                        <LazyTexturePreview
+                          path={item.path}
+                          name={item.name}
+                        />
                       </div>
                     )}
                     <div className="item-name" title={item.name}>

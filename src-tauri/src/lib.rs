@@ -1,7 +1,5 @@
-use std::fs::File;
 use std::sync::Mutex;
 use std::collections::HashMap;
-use std::panic;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -51,21 +49,16 @@ fn load_mpq_archive(path: String) -> Result<Vec<MpqFileInfo>, String> {
         }
     }
     
-    // 使用 catch_unwind 捕获 panic
-    let result = panic::catch_unwind(|| -> Result<Vec<MpqFileInfo>, String> {
-        // 打开 MPQ 文件
-        let file = File::open(&path)
-            .map_err(|e| format!("无法打开文件: {:?}", e))?;
-        
-        // 打开 MPQ 档案
-        let mut archive = ceres_mpq::Archive::open(file)
-            .map_err(|e| format!("无法打开 MPQ 档案: {:?}", e))?;
-        
-        // 获取文件列表
-        let mut files = Vec::new();
-        
-        // 尝试读取 listfile
-        if let Ok(listfile_data) = archive.read_file("(listfile)") {
+    // 打开 MPQ 档案（wow-mpq 使用路径而不是 File）
+    let mut archive = wow_mpq::Archive::open(&path)
+        .map_err(|e| format!("无法打开 MPQ 档案: {:?}", e))?;
+    
+    // 获取文件列表
+    let mut files = Vec::new();
+    
+    // 尝试读取 listfile
+    match archive.read_file("(listfile)") {
+        Ok(listfile_data) => {
             let listfile_str = String::from_utf8_lossy(&listfile_data);
             for line in listfile_str.lines() {
                 let filename = line.trim();
@@ -77,49 +70,32 @@ fn load_mpq_archive(path: String) -> Result<Vec<MpqFileInfo>, String> {
                 }
             }
         }
-        
-        Ok(files)
-    });
-    
-    match result {
-        Ok(Ok(files)) => {
-            // 缓存结果
-            let mut cache = MPQ_CACHE.lock().unwrap();
-            if let Some(ref mut cache) = *cache {
-                cache.archives.insert(path, files.clone());
-            }
-            Ok(files)
+        Err(_) => {
+            // listfile 不存在，忽略
         }
-        Ok(Err(e)) => Err(e),
-        Err(_) => Err("MPQ 档案解析失败（内部错误）".to_string()),
     }
+    
+    // 缓存结果
+    let mut cache = MPQ_CACHE.lock().unwrap();
+    if let Some(ref mut cache) = *cache {
+        cache.archives.insert(path, files.clone());
+    }
+    
+    Ok(files)
 }
 
 #[tauri::command]
 fn read_mpq_file(archive_path: String, file_name: String) -> Result<Vec<u8>, String> {
-    // 使用 catch_unwind 捕获 panic
-    let result = panic::catch_unwind(|| -> Result<Vec<u8>, String> {
-        // 打开 MPQ 文件
-        let file = File::open(&archive_path)
-            .map_err(|e| format!("无法打开文件: {:?}", e))?;
-        
-        // 打开 MPQ 档案
-        let mut archive = ceres_mpq::Archive::open(file)
-            .map_err(|e| format!("无法打开 MPQ 档案: {:?}", e))?;
-        
-        // 读取指定文件
-        let file_data = archive
-            .read_file(&file_name)
-            .map_err(|e| format!("无法读取文件 {}: {:?}", file_name, e))?;
-        
-        Ok(file_data)
-    });
+    // 打开 MPQ 档案
+    let mut archive = wow_mpq::Archive::open(&archive_path)
+        .map_err(|e| format!("无法打开 MPQ 档案: {:?}", e))?;
     
-    match result {
-        Ok(Ok(data)) => Ok(data),
-        Ok(Err(e)) => Err(e),
-        Err(_) => Err(format!("读取文件 {} 失败（内部错误）", file_name)),
-    }
+    // 读取指定文件
+    let file_data = archive
+        .read_file(&file_name)
+        .map_err(|e| format!("无法读取文件 {}: {:?}", file_name, e))?;
+    
+    Ok(file_data)
 }
 
 #[tauri::command]
@@ -131,13 +107,45 @@ fn clear_mpq_cache() -> Result<(), String> {
     Ok(())
 }
 
+/// 解码 BLP 图像为 PNG base64
+#[tauri::command]
+fn decode_blp_to_png(blp_data: Vec<u8>) -> Result<String, String> {
+    use image::ImageFormat;
+    use std::io::Cursor;
+    use blp::core::image::ImageBlp;
+    
+    // 解析 BLP 结构
+    let mut blp = ImageBlp::from_buf(&blp_data)
+        .map_err(|e| format!("BLP 解析失败: {:?}", e))?;
+    
+    // 解码第一层 mipmap（最高分辨率）
+    blp.decode(&blp_data, &[true])
+        .map_err(|e| format!("BLP 解码失败: {:?}", e))?;
+    
+    // 获取 RGBA 图像
+    let img = blp.mipmaps[0].image
+        .take()
+        .ok_or_else(|| "没有可用的图像数据".to_string())?;
+    
+    // 转换为 PNG
+    let mut png_buffer = Vec::new();
+    let mut cursor = Cursor::new(&mut png_buffer);
+    
+    img.write_to(&mut cursor, ImageFormat::Png)
+        .map_err(|e| format!("PNG 编码失败: {}", e))?;
+    
+    // 编码为 base64
+    let base64_str = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &png_buffer);
+    Ok(format!("data:image/png;base64,{}", base64_str))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![greet, load_mpq_archive, read_mpq_file, clear_mpq_cache])
+        .invoke_handler(tauri::generate_handler![greet, load_mpq_archive, read_mpq_file, clear_mpq_cache, decode_blp_to_png])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
