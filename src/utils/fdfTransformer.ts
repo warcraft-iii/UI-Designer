@@ -761,8 +761,15 @@ export class FDFTransformer {
               // 将名称替换为 ID
               anchor.relativeTo = targetFrame.id;
             } else {
-              // 无法解析，保持原名称（可能是外部引用如 "UIParent"）
-              // 不输出警告，因为某些Frame可能引用游戏内置Frame
+              // 无法解析，可能是外部引用如 "UIParent", "ConsoleUI" 等游戏内置Frame
+              // 这些引用在编辑器中不存在，应该删除relativeTo，让calculateFinalPositions处理
+              // 注意：不删除relativePoint，因为它用于确定参考点类型
+              delete anchor.relativeTo;
+              
+              // 调试日志
+              if (refName === 'UIParent' || refName === 'ConsoleUI' || refName === 'GameUI') {
+                console.log(`[FDF Transform] Frame "${frame.name}" references built-in frame "${refName}", treated as canvas reference`);
+              }
             }
           }
         }
@@ -981,14 +988,17 @@ export class FDFTransformer {
         // 计算锚点的绝对位置
         let anchorAbsPos: { x: number; y: number };
         
+        // 检查是否有relativePoint(即使relativeTo被删除了,relativePoint仍可能存在)
+        const hasRelativePoint = primaryAnchor.relativePoint !== undefined;
+        
         if (primaryAnchor.relativeTo) {
-          // 相对锚点
+          // 相对锚点 - relativeTo存在且未被删除
           const absPos = this.calculateAbsoluteAnchorPosition(primaryAnchor, idToFrame);
           if (absPos) {
             anchorAbsPos = absPos;
           } else {
-            // 如果无法解析相对Frame(如UIParent),使用画布的位置
-            const relativePoint = primaryAnchor.relativePoint !== undefined ? primaryAnchor.relativePoint : 4;
+            // 如果无法解析相对Frame,使用画布的位置
+            const relativePoint = hasRelativePoint ? primaryAnchor.relativePoint : 4;
             const canvasPos = this.getCanvasCoordinateForPoint(relativePoint);
             anchorAbsPos = {
               x: canvasPos.x + primaryAnchor.x,
@@ -996,7 +1006,7 @@ export class FDFTransformer {
             };
             
             if (frame.name === 'TestMainPanel') {
-              console.log('使用画布坐标');
+              console.log('无法解析relativeTo,使用画布坐标');
               console.log('relativePoint:', relativePoint);
               console.log('canvasPos:', canvasPos);
               console.log('primaryAnchor.x:', primaryAnchor.x);
@@ -1004,9 +1014,32 @@ export class FDFTransformer {
               console.log('anchorAbsPos:', anchorAbsPos);
             }
           }
+        } else if (hasRelativePoint) {
+          // relativeTo被删除了(如UIParent),但relativePoint存在
+          // 这意味着这是一个相对于画布的锚点
+          const relativePoint = primaryAnchor.relativePoint!; // 已经通过hasRelativePoint检查了
+          const canvasPos = this.getCanvasCoordinateForPoint(relativePoint);
+          anchorAbsPos = {
+            x: canvasPos.x + primaryAnchor.x,
+            y: canvasPos.y + primaryAnchor.y,
+          };
+          
+          if (frame.name === 'TestMainPanel') {
+            console.log('relativeTo已删除,但有relativePoint,使用画布坐标');
+            console.log('relativePoint:', relativePoint);
+            console.log('canvasPos:', canvasPos);
+            console.log('primaryAnchor.x:', primaryAnchor.x);
+            console.log('primaryAnchor.y:', primaryAnchor.y);
+            console.log('anchorAbsPos:', anchorAbsPos);
+          }
         } else {
-          // 绝对锚点
+          // 绝对锚点 - 既没有relativeTo也没有relativePoint
           anchorAbsPos = { x: primaryAnchor.x, y: primaryAnchor.y };
+          
+          if (frame.name === 'TestMainPanel') {
+            console.log('绝对锚点');
+            console.log('anchorAbsPos:', anchorAbsPos);
+          }
         }
         
         // 根据锚点类型,计算Frame的左上角坐标 (x, y)
