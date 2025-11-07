@@ -417,8 +417,8 @@ export class FDFTransformer {
         const x = this.toPixels(values[1] as number, 'x');
         const y = this.toPixels(values[2] as number, 'y');
         frame.anchors.push({ point, x, y });
-        frame.x = x;
-        frame.y = y;
+        // 注意: 不要在这里设置 frame.x 和 frame.y
+        // 最终坐标会在 calculateFinalPositions 中根据锚点计算
       } else if (values.length >= 5) {
         // SetPoint point, relativeTo, relativePoint, x, y
         const relativeToName = values[1] as string;
@@ -970,6 +970,14 @@ export class FDFTransformer {
       if (frame.anchors && frame.anchors.length > 0) {
         const primaryAnchor = frame.anchors[0];
         
+        // 调试日志
+        if (frame.name === 'TestMainPanel') {
+          console.log('=== TestMainPanel 锚点信息 ===');
+          console.log('primaryAnchor:', primaryAnchor);
+          console.log('frame.width:', frame.width);
+          console.log('frame.height:', frame.height);
+        }
+        
         // 计算锚点的绝对位置
         let anchorAbsPos: { x: number; y: number };
         
@@ -986,6 +994,15 @@ export class FDFTransformer {
               x: canvasPos.x + primaryAnchor.x,
               y: canvasPos.y + primaryAnchor.y,
             };
+            
+            if (frame.name === 'TestMainPanel') {
+              console.log('使用画布坐标');
+              console.log('relativePoint:', relativePoint);
+              console.log('canvasPos:', canvasPos);
+              console.log('primaryAnchor.x:', primaryAnchor.x);
+              console.log('primaryAnchor.y:', primaryAnchor.y);
+              console.log('anchorAbsPos:', anchorAbsPos);
+            }
           }
         } else {
           // 绝对锚点
@@ -1036,6 +1053,12 @@ export class FDFTransformer {
             // 默认CENTER
             frame.x = anchorAbsPos.x - frame.width / 2;
             frame.y = anchorAbsPos.y - frame.height / 2;
+        }
+        
+        if (frame.name === 'TestMainPanel') {
+          console.log('计算后的坐标:');
+          console.log('frame.x:', frame.x);
+          console.log('frame.y:', frame.y);
         }
       }
     }
