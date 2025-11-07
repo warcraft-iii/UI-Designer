@@ -1,0 +1,519 @@
+{
+  "summary": {
+    "totalFiles": 84,
+    "successCount": 79,
+    "failureCount": 5,
+    "successRate": "94.05%"
+  },
+  "results": [
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\DateStrings.fdf",
+      "success": false,
+      "originalFrameCount": 0,
+      "exportedFrameCount": 0,
+      "error": "未解析到任何Frame"
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\GlobalStrings.fdf",
+      "success": false,
+      "originalFrameCount": 0,
+      "exportedFrameCount": 0,
+      "error": "未解析到任何Frame"
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\AdvancedOptionsDisplay.fdf",
+      "success": true,
+      "originalFrameCount": 17,
+      "exportedFrameCount": 17
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\AdvancedOptionsPane.fdf",
+      "success": true,
+      "originalFrameCount": 23,
+      "exportedFrameCount": 23
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetChannelList.fdf",
+      "success": true,
+      "originalFrameCount": 8,
+      "exportedFrameCount": 8
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetChatActionMenu.fdf",
+      "success": true,
+      "originalFrameCount": 4,
+      "exportedFrameCount": 4
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetChatPanel.fdf",
+      "success": true,
+      "originalFrameCount": 99,
+      "exportedFrameCount": 99
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetChatroom.fdf",
+      "success": true,
+      "originalFrameCount": 1,
+      "exportedFrameCount": 1
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetClanInvitation.fdf",
+      "success": true,
+      "originalFrameCount": 11,
+      "exportedFrameCount": 11
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetClanMateListBox.fdf",
+      "success": true,
+      "originalFrameCount": 2,
+      "exportedFrameCount": 2
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetClanPane.fdf",
+      "success": true,
+      "originalFrameCount": 64,
+      "exportedFrameCount": 64
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetCustomCreatePanel.fdf",
+      "success": true,
+      "originalFrameCount": 34,
+      "exportedFrameCount": 34
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetCustomJoinPanel.fdf",
+      "success": true,
+      "originalFrameCount": 64,
+      "exportedFrameCount": 64
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetCustomLoadPanel.fdf",
+      "success": true,
+      "originalFrameCount": 15,
+      "exportedFrameCount": 15
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetCustomPanel.fdf",
+      "success": true,
+      "originalFrameCount": 61,
+      "exportedFrameCount": 61
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetFriendsListBox.fdf",
+      "success": true,
+      "originalFrameCount": 2,
+      "exportedFrameCount": 2
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetFriendsPane.fdf",
+      "success": true,
+      "originalFrameCount": 6,
+      "exportedFrameCount": 6
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetIconSelectBox.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetMain.fdf",
+      "success": true,
+      "originalFrameCount": 110,
+      "exportedFrameCount": 110
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetNewsBox.fdf",
+      "success": true,
+      "originalFrameCount": 2,
+      "exportedFrameCount": 2
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetProfilePanel.fdf",
+      "success": true,
+      "originalFrameCount": 159,
+      "exportedFrameCount": 159
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetScheduledGame.fdf",
+      "success": true,
+      "originalFrameCount": 16,
+      "exportedFrameCount": 16
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetStandardPanel.fdf",
+      "success": true,
+      "originalFrameCount": 28,
+      "exportedFrameCount": 28
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetStatusBox.fdf",
+      "success": true,
+      "originalFrameCount": 20,
+      "exportedFrameCount": 20
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetTeamInvitation.fdf",
+      "success": true,
+      "originalFrameCount": 19,
+      "exportedFrameCount": 19
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetTeamPanel.fdf",
+      "success": true,
+      "originalFrameCount": 85,
+      "exportedFrameCount": 85
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetTemplates.fdf",
+      "success": true,
+      "originalFrameCount": 83,
+      "exportedFrameCount": 83
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetUserListBox.fdf",
+      "success": true,
+      "originalFrameCount": 2,
+      "exportedFrameCount": 2
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\BattleNetUserListBoxItem.fdf",
+      "success": true,
+      "originalFrameCount": 4,
+      "exportedFrameCount": 4
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\CampaignListBox.fdf",
+      "success": true,
+      "originalFrameCount": 2,
+      "exportedFrameCount": 2
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\CampaignMenu.fdf",
+      "success": true,
+      "originalFrameCount": 14,
+      "exportedFrameCount": 14
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\CheckListBox.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\CustomCampaignMenu.fdf",
+      "success": true,
+      "originalFrameCount": 32,
+      "exportedFrameCount": 32
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\DecoratedMapListBox.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\DialogWar3.fdf",
+      "success": true,
+      "originalFrameCount": 13,
+      "exportedFrameCount": 13
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\GameChatroom.fdf",
+      "success": true,
+      "originalFrameCount": 16,
+      "exportedFrameCount": 16
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\ListBoxWar3.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\Loading.fdf",
+      "success": true,
+      "originalFrameCount": 20,
+      "exportedFrameCount": 20
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\LoadSavedGameScreen.fdf",
+      "success": true,
+      "originalFrameCount": 11,
+      "exportedFrameCount": 11
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\LocalMultiplayerCreate.fdf",
+      "success": true,
+      "originalFrameCount": 28,
+      "exportedFrameCount": 28
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\LocalMultiplayerJoin.fdf",
+      "success": true,
+      "originalFrameCount": 28,
+      "exportedFrameCount": 28
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\LocalMultiplayerLoad.fdf",
+      "success": true,
+      "originalFrameCount": 11,
+      "exportedFrameCount": 11
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\MainMenu.fdf",
+      "success": true,
+      "originalFrameCount": 84,
+      "exportedFrameCount": 84
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\MapInfoPane.fdf",
+      "success": true,
+      "originalFrameCount": 15,
+      "exportedFrameCount": 15
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\MapListBox.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\MapPreferenceBox.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\MultiplayerMenu.fdf",
+      "success": false,
+      "originalFrameCount": 0,
+      "exportedFrameCount": 0,
+      "error": "未解析到任何Frame"
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\OptionsMenu.fdf",
+      "success": true,
+      "originalFrameCount": 137,
+      "exportedFrameCount": 137
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\PlayerSlot.fdf",
+      "success": true,
+      "originalFrameCount": 27,
+      "exportedFrameCount": 27
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\ScoreScreen.fdf",
+      "success": true,
+      "originalFrameCount": 80,
+      "exportedFrameCount": 80
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\SinglePlayerMenu.fdf",
+      "success": true,
+      "originalFrameCount": 44,
+      "exportedFrameCount": 44
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\Skirmish.fdf",
+      "success": true,
+      "originalFrameCount": 26,
+      "exportedFrameCount": 26
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\StandardTemplates.fdf",
+      "success": true,
+      "originalFrameCount": 148,
+      "exportedFrameCount": 148
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\TeamSetup.fdf",
+      "success": true,
+      "originalFrameCount": 1,
+      "exportedFrameCount": 1
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\Glue\\ViewReplayScreen.fdf",
+      "success": true,
+      "originalFrameCount": 13,
+      "exportedFrameCount": 13
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\InfoPanelStrings.fdf",
+      "success": false,
+      "originalFrameCount": 0,
+      "exportedFrameCount": 0,
+      "error": "未解析到任何Frame"
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\NetworkStrings.fdf",
+      "success": false,
+      "originalFrameCount": 0,
+      "exportedFrameCount": 0,
+      "error": "未解析到任何Frame"
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\AllianceDialog.fdf",
+      "success": true,
+      "originalFrameCount": 16,
+      "exportedFrameCount": 16
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\AllianceSlot.fdf",
+      "success": true,
+      "originalFrameCount": 11,
+      "exportedFrameCount": 11
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\ChatDialog.fdf",
+      "success": true,
+      "originalFrameCount": 24,
+      "exportedFrameCount": 24
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\CinematicPanel.fdf",
+      "success": true,
+      "originalFrameCount": 9,
+      "exportedFrameCount": 9
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\ConsoleUI.fdf",
+      "success": true,
+      "originalFrameCount": 1,
+      "exportedFrameCount": 1
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\EscMenuMainPanel.fdf",
+      "success": true,
+      "originalFrameCount": 57,
+      "exportedFrameCount": 57
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\EscMenuOptionsPanel.fdf",
+      "success": true,
+      "originalFrameCount": 128,
+      "exportedFrameCount": 128
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\EscMenuSaveGamePanel.fdf",
+      "success": true,
+      "originalFrameCount": 37,
+      "exportedFrameCount": 37
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\EscMenuTemplates.fdf",
+      "success": true,
+      "originalFrameCount": 52,
+      "exportedFrameCount": 52
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\GameResultDialog.fdf",
+      "success": true,
+      "originalFrameCount": 9,
+      "exportedFrameCount": 9
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\GameSaveSplashDialog.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\InfoPanelBuildingDetail.fdf",
+      "success": true,
+      "originalFrameCount": 11,
+      "exportedFrameCount": 11
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\InfoPanelItemDetail.fdf",
+      "success": true,
+      "originalFrameCount": 3,
+      "exportedFrameCount": 3
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\InfoPanelTemplates.fdf",
+      "success": true,
+      "originalFrameCount": 4,
+      "exportedFrameCount": 4
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\InfoPanelUnitDetail.fdf",
+      "success": true,
+      "originalFrameCount": 26,
+      "exportedFrameCount": 26
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\LeaderBoard.fdf",
+      "success": true,
+      "originalFrameCount": 4,
+      "exportedFrameCount": 4
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\LogDialog.fdf",
+      "success": true,
+      "originalFrameCount": 8,
+      "exportedFrameCount": 8
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\MultiBoard.fdf",
+      "success": true,
+      "originalFrameCount": 10,
+      "exportedFrameCount": 10
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\QuestDialog.fdf",
+      "success": true,
+      "originalFrameCount": 45,
+      "exportedFrameCount": 45
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\ReplayPanel.fdf",
+      "success": true,
+      "originalFrameCount": 12,
+      "exportedFrameCount": 12
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\ResourceBar.fdf",
+      "success": true,
+      "originalFrameCount": 1,
+      "exportedFrameCount": 1
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\ScriptDialog.fdf",
+      "success": true,
+      "originalFrameCount": 5,
+      "exportedFrameCount": 5
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\SimpleInfoPanel.fdf",
+      "success": true,
+      "originalFrameCount": 18,
+      "exportedFrameCount": 18
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\SuspendDialog.fdf",
+      "success": true,
+      "originalFrameCount": 10,
+      "exportedFrameCount": 10
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\TimerDialog.fdf",
+      "success": true,
+      "originalFrameCount": 4,
+      "exportedFrameCount": 4
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\UnresponsiveDialog.fdf",
+      "success": true,
+      "originalFrameCount": 5,
+      "exportedFrameCount": 5
+    },
+    {
+      "file": "target\\vendor\\UI\\FrameDef\\UI\\UpperButtonBar.fdf",
+      "success": true,
+      "originalFrameCount": 6,
+      "exportedFrameCount": 6
+    }
+  ]
+}
