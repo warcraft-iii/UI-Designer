@@ -345,7 +345,6 @@ export class FDFExporter {
 export class FDFExporterEnhanced extends FDFExporter {
   private enhancedOptions: Required<EnhancedExportOptions>;
   private frameMap: Map<string, FrameData> = new Map();
-  private templateRegistry: Map<string, FrameData> = new Map();
   
   constructor(options: EnhancedExportOptions = {}) {
     super(options);
@@ -361,8 +360,6 @@ export class FDFExporterEnhanced extends FDFExporter {
       exportNestedFrames: options.exportNestedFrames ?? true,
       templateRegistry: options.templateRegistry ?? new Map(),
     };
-    
-    this.templateRegistry = this.enhancedOptions.templateRegistry;
   }
   
   /**
