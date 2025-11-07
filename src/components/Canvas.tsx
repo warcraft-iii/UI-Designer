@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useImperativeHandle, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
@@ -141,14 +141,26 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
     getMousePosition: () => mousePosition,
   }));
 
-  // 处理缩放
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.altKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      setScale(prev => Math.max(0.1, Math.min(5, prev * delta)));
-    }
-  };
+  // 使用原生事件监听器处理滚轮缩放（避免 passive 事件警告）
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+      if (e.altKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        setScale(prev => Math.max(0.1, Math.min(5, prev * delta)));
+      }
+    };
+
+    // 添加非 passive 的滚轮事件监听器
+    canvas.addEventListener('wheel', handleWheelNative, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('wheel', handleWheelNative);
+    };
+  }, []);
 
   // 处理画布拖拽（平移）
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -957,7 +969,6 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   return (
     <div 
       className="canvas-container"
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

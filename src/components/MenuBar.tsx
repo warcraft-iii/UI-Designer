@@ -72,6 +72,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   const [showPreferences, setShowPreferences] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTargets, setDeleteTargets] = useState<string[]>([]);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
   
@@ -84,7 +86,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       const frames = await importFromFDF();
       if (frames && frames.length > 0) {
         addFrames(frames);
-        alert(`成功导入 ${frames.length} 个控件`);
+        setSuccessMessage(`成功导入 ${frames.length} 个控件`);
+        setShowSuccessDialog(true);
       }
     } catch (error) {
       console.error('导入FDF失败:', error);
@@ -98,7 +101,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       const frames = await importFromFDFEnhanced();
       if (frames && frames.length > 0) {
         addFrames(frames);
-        alert(`成功导入 ${frames.length} 个控件（含 FDF 元数据）`);
+        setSuccessMessage(`成功导入 ${frames.length} 个控件（含 FDF 元数据）`);
+        setShowSuccessDialog(true);
       }
     } catch (error) {
       console.error('增强导入失败:', error);
@@ -111,7 +115,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
     try {
       const count = await importFDFFolder();
       if (count > 0) {
-        alert(`成功加载 ${count} 个 FDF 模板`);
+        setSuccessMessage(`成功加载 ${count} 个 FDF 模板`);
+        setShowSuccessDialog(true);
       }
     } catch (error) {
       console.error('导入模板库失败:', error);
@@ -827,6 +832,17 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           type="danger"
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
+        />
+      )}
+
+      {showSuccessDialog && (
+        <ConfirmDialog
+          title="成功"
+          message={successMessage}
+          confirmText="确定"
+          type="info"
+          onConfirm={() => setShowSuccessDialog(false)}
+          onCancel={() => setShowSuccessDialog(false)}
         />
       )}
     </>
