@@ -17,20 +17,11 @@ import { decodeBLPToDataURL } from './blpDecoder';
 /**
  * WC3 内置纹理名称映射表
  * 将内置纹理名称映射到实际的文件路径
- * 初始值为空,会从 war3skins.txt 动态加载
+ * 
+ * 初始值为空对象,会在 mpqManager.setWar3Path() 后
+ * 通过 loadWar3Skins() 从 UI\war3skins.txt 动态加载
  */
-let WC3_BUILTIN_TEXTURES: Record<string, string> = {
-  // 默认回退映射(如果 war3skins.txt 加载失败)
-  // 这些路径来自 war3skins.txt 的 [Human] 部分
-  'ToolTipBackground': 'UI\\Widgets\\ToolTips\\Human\\human-tooltip-background.blp',
-  'ToolTipBorder': 'UI\\Widgets\\ToolTips\\Human\\human-tooltip-border.blp',
-  'GoldIcon': 'UI\\Feedback\\Resources\\ResourceGold.blp',
-  'LumberIcon': 'UI\\Feedback\\Resources\\ResourceLumber.blp',
-  'SupplyIcon': 'UI\\Feedback\\Resources\\ResourceSupply.blp',
-  'UpkeepIcon': 'UI\\Feedback\\Resources\\ResourceUpkeep.blp',
-  'CommandButtonBorder': 'UI\\Widgets\\Console\\Human\\human-console-button-up.blp',
-  'CommandButtonDisabledBackground': 'UI\\Widgets\\Console\\Human\\human-console-button-back-disabled.blp',
-};
+let WC3_BUILTIN_TEXTURES: Record<string, string> = {};
 
 /**
  * 解析 war3skins.txt 文件,提取纹理映射
