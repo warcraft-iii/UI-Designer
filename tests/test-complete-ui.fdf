@@ -73,7 +73,7 @@ Frame "GLUEBUTTON" "TestIconButton" {
     ControlDisabledBackdrop "TestIconButtonDisabledBackdrop",
     Frame "BACKDROP" "TestIconButtonDisabledBackdrop" {
         DecorateFileNames,
-        BackdropBackground "CommandButtonDisabled",
+        BackdropBackground "ConsoleButtonDisabledBackground",
     }
 }
 
@@ -113,7 +113,7 @@ Frame "SLIDER" "TestSlider" {
     ControlBackdrop "TestSliderBackdrop",
     Frame "BACKDROP" "TestSliderBackdrop" {
         BackdropTileBackground,
-        BackdropBackground "QuestBorder",
+        BackdropBackground "QuestDialogBorder",
         BackdropBlendAll,
     }
     
@@ -126,7 +126,7 @@ Frame "SLIDER" "TestSlider" {
         ControlBackdrop "TestSliderThumbBackdrop",
         Frame "BACKDROP" "TestSliderThumbBackdrop" {
             DecorateFileNames,
-            BackdropBackground "QuestButtonIcon",
+            BackdropBackground "EscMenuSliderThumbButton",
         }
     }
 }
@@ -208,7 +208,7 @@ Frame "BACKDROP" "TestProgressBar" {
     
     // 背景
     BackdropTileBackground,
-    BackdropBackground "QuestBorder",
+    BackdropBackground "QuestDialogBorder",
     BackdropBlendAll,
 }
 
@@ -309,7 +309,7 @@ Frame "SPRITE" "TestSprite" {
     SpriteAnimate,
     SpriteAnimSpeed 10,
     Texture {
-        File "UI\Widgets\Console\Human\human-border-topleft.blp",
+        File "UI\\Widgets\\Console\\Human\\infocard-heroattributes-str.blp",
         Width 0.040,
         Height 0.040,
         Anchor CENTER, 0.0, 0.0,
@@ -400,16 +400,22 @@ Frame "FRAME" "TestTooltip" {
 // - EscMenuBorder
 // - ToolTipBackground
 // - ToolTipBorder
-// - QuestBorder
-// - CommandButton
-// - CommandButtonBorder
-// - CommandButtonDisabled
+// - QuestDialogBorder
+// - QuestDialogBackground
+// - ConsoleButtonBackground
+// - ConsoleButtonBorder
+// - ConsoleButtonDisabledBackground
 
 // 资源图标:
 // - GoldIcon
 // - LumberIcon
 // - SupplyIcon
-// - FoodIcon
+// - UpkeepIcon
+
+// 命令按钮:
+// - CommandButtonActiveHighlight
+// - CommandButtonHeroGlow
+// - CommandButtonNumberOverlay
 
 // 英雄头像:
 // - ReplaceableTextures\CommandButtons\BTNHeroAlchemist.blp
@@ -429,6 +435,11 @@ Frame "FRAME" "TestTooltip" {
 // - ReplaceableTextures\CommandButtons\BTNFlame.blp
 // - ReplaceableTextures\CommandButtons\BTNHeal.blp
 // - ReplaceableTextures\CommandButtons\BTNDivineShield.blp
+
+// 滑块:
+// - EscMenuSliderBackground
+// - EscMenuSliderBorder
+// - EscMenuSliderThumbButton
 
 // 其他:
 // - HighlightAlpha (高亮效果)
