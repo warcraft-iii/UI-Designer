@@ -73,6 +73,14 @@ export class MPQManager {
     const result = await this.loadStandardArchives();
     console.log(`[MPQManager] MPQ 加载结果: ${result.success} 成功, ${result.failed} 失败`);
     console.log(`[MPQManager] 文件缓存大小: ${this.fileListCache.size} 个文件`);
+    
+    // 加载 war3skins.txt 更新纹理映射
+    try {
+      const { loadWar3Skins } = await import('./textureLoader');
+      await loadWar3Skins();
+    } catch (error) {
+      console.error('[MPQManager] 加载 war3skins.txt 失败:', error);
+    }
   }
   
   /**

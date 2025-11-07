@@ -17,32 +17,87 @@ import { decodeBLPToDataURL } from './blpDecoder';
 /**
  * WC3 内置纹理名称映射表
  * 将内置纹理名称映射到实际的文件路径
+ * 初始值为空,会从 war3skins.txt 动态加载
  */
-const WC3_BUILTIN_TEXTURES: Record<string, string> = {
-  // UI 边框和背景
-  'EscMenuBackground': 'UI\\Widgets\\EscMenu\\Human\\background.blp',
-  'EscMenuBorder': 'UI\\Widgets\\EscMenu\\Human\\border.blp',
+let WC3_BUILTIN_TEXTURES: Record<string, string> = {
+  // 默认回退映射(如果 war3skins.txt 加载失败)
+  // 这些路径来自 war3skins.txt 的 [Human] 部分
   'ToolTipBackground': 'UI\\Widgets\\ToolTips\\Human\\human-tooltip-background.blp',
   'ToolTipBorder': 'UI\\Widgets\\ToolTips\\Human\\human-tooltip-border.blp',
-  'QuestBorder': 'UI\\Widgets\\QuestDialog\\questborder.blp',
-  'CommandButton': 'UI\\Widgets\\Console\\Human\\CommandButton\\human-commandbutton.blp',
-  'CommandButtonBorder': 'UI\\Widgets\\Console\\Human\\CommandButton\\human-commandbutton-border.blp',
-  'CommandButtonDisabled': 'UI\\Widgets\\Console\\Human\\CommandButton\\human-commandbutton-disabled.blp',
-  
-  // 资源图标
-  'GoldIcon': 'UI\\Widgets\\Console\\Human\\gold.blp',
-  'LumberIcon': 'UI\\Widgets\\Console\\Human\\lumber.blp',
-  'SupplyIcon': 'UI\\Widgets\\Console\\Human\\supply.blp',
-  'FoodIcon': 'UI\\Widgets\\Console\\Human\\food.blp',
-  
-  // 控件元素
-  'QuestButtonIcon': 'UI\\Widgets\\BattleNet\\bnet-button-quest.blp',
-  'HighlightAlpha': 'UI\\Widgets\\EscMenu\\Human\\editbox-highlight.blp',
-  'Feedback': 'Textures\\Feedback.blp',
-  'SelectionCircle': 'UI\\Feedback\\SelectionCircle\\SelectionCircle.blp',
-  
-  // 添加更多内置纹理...
+  'GoldIcon': 'UI\\Feedback\\Resources\\ResourceGold.blp',
+  'LumberIcon': 'UI\\Feedback\\Resources\\ResourceLumber.blp',
+  'SupplyIcon': 'UI\\Feedback\\Resources\\ResourceSupply.blp',
+  'UpkeepIcon': 'UI\\Feedback\\Resources\\ResourceUpkeep.blp',
+  'CommandButtonBorder': 'UI\\Widgets\\Console\\Human\\human-console-button-up.blp',
+  'CommandButtonDisabledBackground': 'UI\\Widgets\\Console\\Human\\human-console-button-back-disabled.blp',
 };
+
+/**
+ * 解析 war3skins.txt 文件,提取纹理映射
+ * @param content war3skins.txt 文件内容
+ * @returns 纹理名称到路径的映射
+ */
+function parseWar3Skins(content: string): Record<string, string> {
+  const textures: Record<string, string> = {};
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    // 跳过注释和空行
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('[')) {
+      continue;
+    }
+    
+    // 解析 key=value 格式
+    const match = trimmed.match(/^([^=]+)=(.+)$/);
+    if (match) {
+      const key = match[1].trim();
+      const value = match[2].trim();
+      
+      // 只保留图片文件路径(以 .blp, .mdl 等结尾)
+      if (value.match(/\.(blp|tga|png|jpg|mdl)$/i)) {
+        textures[key] = value;
+      }
+    }
+  }
+  
+  return textures;
+}
+
+/**
+ * 从 MPQ 加载 war3skins.txt 并更新内置纹理映射
+ */
+export async function loadWar3Skins(): Promise<void> {
+  try {
+    const { mpqManager } = await import('./mpqManager');
+    
+    // 读取 war3skins.txt
+    const buffer = await mpqManager.readFile('UI\\war3skins.txt');
+    
+    if (!buffer) {
+      console.warn('[TextureLoader] 无法读取 war3skins.txt,使用默认映射');
+      return;
+    }
+    
+    // 转换为文本
+    const decoder = new TextDecoder('utf-8');
+    const content = decoder.decode(buffer);
+    
+    // 解析纹理映射
+    const textures = parseWar3Skins(content);
+    
+    console.log(`[TextureLoader] 从 war3skins.txt 加载了 ${Object.keys(textures).length} 个内置纹理映射`);
+    
+    // 合并到现有映射(war3skins.txt 优先)
+    WC3_BUILTIN_TEXTURES = {
+      ...WC3_BUILTIN_TEXTURES,
+      ...textures,
+    };
+    
+  } catch (error) {
+    console.error('[TextureLoader] 加载 war3skins.txt 失败:', error);
+  }
+}
 
 /**
  * 纹理类型
