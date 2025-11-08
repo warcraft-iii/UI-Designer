@@ -3,10 +3,8 @@ import { vec3, mat4, quat } from 'gl-matrix';
 import { join } from '@tauri-apps/api/path';
 import { exists, readFile } from '@tauri-apps/plugin-fs';
 import { mpqManager } from '../utils/mpqManager';
-// @ts-ignore
-import { parseMDX } from 'war3-model/mdx/parse';
-// @ts-ignore  
-import { ModelRenderer } from 'war3-model/renderer/modelRenderer';
+// @ts-ignore - war3-model 是 TypeScript 源码，没有类型定义
+import { parseMDX, ModelRenderer } from 'war3-model';
 
 interface ModelViewerProps {
   modelPath: string; // MDX 文件路径（相对或绝对）
@@ -101,7 +99,8 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
         // 解析 MDX
         const model = parseMDX(modelBuffer);
         console.log('📦 MDX 模型已解析:', {
-          name: model.Name,
+          version: model.Version,
+          name: model.Info?.Name,
           geosets: model.Geosets?.length || 0,
           textures: model.Textures?.length || 0,
           sequences: model.Sequences?.length || 0
@@ -154,7 +153,7 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
         if (model.Sequences && model.Sequences.length > 0) {
           const firstSeq = model.Sequences[0];
           modelRenderer.setSequence(0);
-          console.log(`🎬 播放动画: ${firstSeq.Name || 'Sequence 0'}`);
+          console.log(`🎬 播放动画: ${firstSeq.Name || 'Sequence 0'} (${model.Sequences.length} 个动画)`);
         }
 
         // 渲染循环
