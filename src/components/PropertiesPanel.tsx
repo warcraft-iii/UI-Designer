@@ -273,6 +273,11 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
   const handleChange = (field: string, value: any) => {
     if (!selectedFrameId) return;
     
+    // 调试：打印更新信息
+    if (field === 'backdropBackgroundInsets') {
+      console.log('[PropertiesPanel] 更新 backdropBackgroundInsets:', value);
+    }
+    
     // 更新字段
     updateFrame(selectedFrameId, { [field]: value });
   };
@@ -1151,6 +1156,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
             dimensions={4}
             labels={['左', '上', '右', '下']}
             step={0.001}
+            min={0}
+            max={0.1}
+            tooltip="背景纹理的内边距，范围 0.000 ~ 0.100（WC3 坐标单位）"
           />
 
           <FilePath

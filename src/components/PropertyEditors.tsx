@@ -431,6 +431,14 @@ export const VectorEditor: React.FC<VectorEditorProps> = ({
     }
   };
 
+  // 格式化显示值：根据 step 确定小数位数
+  const formatValue = (val: number): string => {
+    if (step >= 1) return val.toFixed(0);
+    if (step >= 0.1) return val.toFixed(1);
+    if (step >= 0.01) return val.toFixed(2);
+    return val.toFixed(3);
+  };
+
   return (
     <div className="property-editor vector-editor" title={tooltip}>
       <label>{label}</label>
@@ -443,7 +451,7 @@ export const VectorEditor: React.FC<VectorEditorProps> = ({
               step={step}
               min={min}
               max={max}
-              value={value[idx] ?? 0}
+              value={formatValue(value[idx] ?? 0)}
               onChange={(e) => handleChange(idx, e.target.value)}
               disabled={disabled}
             />

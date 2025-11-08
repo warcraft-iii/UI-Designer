@@ -903,16 +903,16 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
                   // backdropBackgroundInsets 格式: [left, top, right, bottom]
                   // 左右使用横向比例 0.8，上下使用纵向比例 0.6
                   left: frame.backdropBackgroundInsets 
-                    ? `${(frame.backdropBackgroundInsets[0] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}px`
+                    ? (frame.backdropBackgroundInsets[0] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)
                     : 0,
                   top: frame.backdropBackgroundInsets 
-                    ? `${(frame.backdropBackgroundInsets[1] / 0.6) * CANVAS_HEIGHT}px`
+                    ? (frame.backdropBackgroundInsets[1] / 0.6) * CANVAS_HEIGHT
                     : 0,
                   right: frame.backdropBackgroundInsets 
-                    ? `${(frame.backdropBackgroundInsets[2] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}px`
+                    ? (frame.backdropBackgroundInsets[2] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)
                     : 0,
                   bottom: frame.backdropBackgroundInsets 
-                    ? `${(frame.backdropBackgroundInsets[3] / 0.6) * CANVAS_HEIGHT}px`
+                    ? (frame.backdropBackgroundInsets[3] / 0.6) * CANVAS_HEIGHT
                     : 0,
                   backgroundImage: (() => {
                     const textureState = textureMap.get(frame.backdropBackground);
