@@ -4,16 +4,12 @@ import './Ruler.css';
 interface RulerProps {
   orientation: 'horizontal' | 'vertical';
   length: number; // 标尺长度（像素），水平为 1440px (对应 0.8 WC3)，垂直为 1080px (对应 0.6 WC3)
-  scale: number; // 缩放比例
-  offset: number; // 偏移量（像素，未缩放）
   onCreateGuide?: (orientation: 'horizontal' | 'vertical', clientX: number, clientY: number) => void; // 创建参考线回调
 }
 
 export const Ruler: React.FC<RulerProps> = ({ 
   orientation, 
   length, 
-  scale, 
-  offset,
   onCreateGuide,
 }) => {
   const RULER_SIZE = 30; // 标尺宽度/高度
@@ -68,17 +64,9 @@ export const Ruler: React.FC<RulerProps> = ({
   const generateTicks = () => {
     const ticks: { position: number; label?: string; major?: boolean }[] = [];
     
-    // 根据缩放级别决定刻度间隔
-    let interval = 0.05; // WC3单位
-    let majorInterval = 0.1; // 主刻度间隔
-    
-    if (scale < 0.5) {
-      interval = 0.1;
-      majorInterval = 0.2;
-    } else if (scale > 2) {
-      interval = 0.025;
-      majorInterval = 0.05;
-    }
+    // 固定的刻度间隔
+    const interval = 0.05; // WC3单位，小刻度
+    const majorInterval = 0.1; // 主刻度间隔
 
     // 标尺的长度对应的 WC3 单位范围（固定的）
     const maxWc3 = isHorizontal ? 0.8 : 0.6;
@@ -86,22 +74,22 @@ export const Ruler: React.FC<RulerProps> = ({
     // 每个 WC3 单位对应的像素数
     const pixelsPerUnit = length / maxWc3;
 
-    // 生成所有刻度（从 0 到 maxWc3，不受 offset 影响）
+    // 标尺是固定的，不随画布平移而改变
+    // 标尺的 0px 位置永远对应 WC3 坐标 0.00
+    // 标尺的 length px 位置永远对应 WC3 坐标 maxWc3
     for (let wc3Coord = 0; wc3Coord <= maxWc3; wc3Coord += interval) {
-      // 计算刻度在标尺上的像素位置（这里才考虑 offset 和 scale）
-      const pixelPos = wc3Coord * pixelsPerUnit + offset * scale;
+      // 计算刻度在标尺上的像素位置（固定，不受 offset 影响）
+      const pixelPos = wc3Coord * pixelsPerUnit;
       
-      // 只渲染在标尺可见范围内的刻度
-      if (pixelPos >= 0 && pixelPos <= length) {
-        // 修复浮点数精度问题：将坐标四舍五入到合理精度后再判断
-        const roundedCoord = Math.round(wc3Coord / interval) * interval;
-        const isMajor = Math.abs(roundedCoord % majorInterval) < 0.0001; // 主刻度显示数字
-        ticks.push({
-          position: pixelPos,
-          label: isMajor ? roundedCoord.toFixed(2) : undefined,
-          major: isMajor
-        });
-      }
+      // 修复浮点数精度问题：将坐标四舍五入到合理精度后再判断
+      const roundedCoord = Math.round(wc3Coord / interval) * interval;
+      const isMajor = Math.abs(roundedCoord % majorInterval) < 0.0001; // 主刻度显示数字
+      
+      ticks.push({
+        position: pixelPos,
+        label: isMajor ? roundedCoord.toFixed(2) : undefined,
+        major: isMajor
+      });
     }
 
     return ticks;
