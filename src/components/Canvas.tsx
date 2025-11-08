@@ -28,6 +28,14 @@ const BackdropBackground: React.FC<{
   canvasHeight: number;
   margin: number;
 }> = ({ frame, textureMap, isSelected, canvasWidth, canvasHeight, margin }) => {
+  // 无条件调试日志 - 确认组件被渲染
+  console.log('[BackdropBackground] 组件渲染', {
+    frameName: frame.name,
+    isSelected,
+    backdropBackground: frame.backdropBackground,
+    backdropBackgroundInsets: frame.backdropBackgroundInsets,
+  });
+  
   const leftInset = frame.backdropBackgroundInsets 
     ? (frame.backdropBackgroundInsets[0] / 0.8) * (canvasWidth - 2 * margin)
     : 0;
@@ -44,14 +52,10 @@ const BackdropBackground: React.FC<{
   const textureState = frame.backdropBackground ? textureMap.get(frame.backdropBackground) : undefined;
   const bgImage = textureState?.url ? `url(${textureState.url})` : undefined;
   
-  // 调试日志
-  if (isSelected) {
-    console.log('[Canvas] Backdrop 背景渲染', {
-      backdropBackgroundInsets: frame.backdropBackgroundInsets,
-      计算的insets像素: { leftInset, topInset, rightInset, bottomInset },
-      backgroundImage: bgImage ? '已加载' : '未加载',
-    });
-  }
+  console.log('[BackdropBackground] 计算结果', {
+    insets像素: { leftInset, topInset, rightInset, bottomInset },
+    backgroundImage: bgImage ? '已加载' : '未加载',
+  });
   
   return (
     <div
@@ -954,7 +958,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
             }}
           >
             {/* Backdrop 背景纹理（带内边距） */}
-            {frame.backdropBackground && (
+            {frame.backdropBackground ? (
               <BackdropBackground
                 frame={frame}
                 textureMap={textureMap}
@@ -963,6 +967,14 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
                 canvasHeight={CANVAS_HEIGHT}
                 margin={MARGIN}
               />
+            ) : isSelected && frame.backdropBackgroundInsets && (
+              // 警告：设置了 insets 但没有背景纹理
+              console.warn('[Canvas] ⚠️ 警告: 设置了 backdropBackgroundInsets 但没有 backdropBackground 纹理', {
+                frameName: frame.name,
+                backdropBackgroundInsets: frame.backdropBackgroundInsets,
+                提示: '请在属性面板的 "Backdrop 背景纹理" 中选择一个纹理'
+              }),
+              null
             )}
 
             {/* Backdrop 边框纹理 */}
