@@ -1229,7 +1229,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       {showRulers && (
         <Ruler
           orientation="vertical"
-          length={CANVAS_HEIGHT}
+          length={CANVAS_HEIGHT - 2 * MARGIN}
           scale={scale}
           offset={offset.y}
           onCreateGuide={handleCreateGuide}
