@@ -98,10 +98,12 @@ export const Ruler: React.FC<RulerProps> = ({
       const pixelPos = wc3Coord * pixelsPerUnit * scale + offset;
       
       if (pixelPos >= 0 && pixelPos <= length) {
-        const isMajor = Math.abs(wc3Coord % majorInterval) < 0.001; // 主刻度显示数字
+        // 修复浮点数精度问题：将坐标四舍五入到合理精度后再判断
+        const roundedCoord = Math.round(wc3Coord / interval) * interval;
+        const isMajor = Math.abs(roundedCoord % majorInterval) < 0.0001; // 主刻度显示数字
         ticks.push({
           position: pixelPos,
-          label: isMajor ? wc3Coord.toFixed(2) : undefined,
+          label: isMajor ? roundedCoord.toFixed(2) : undefined,
           major: isMajor
         });
       }
