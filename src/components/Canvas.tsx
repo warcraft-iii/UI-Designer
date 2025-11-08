@@ -1030,8 +1030,8 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
                 <ModelViewer
                   modelPath={frame.backgroundArt}
                   projectDir={projectDir || undefined}
-                  width={frame.width ?? 100}
-                  height={frame.height ?? 100}
+                  width={width}
+                  height={height}
                 />
               )}
               
