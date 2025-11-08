@@ -1,5 +1,7 @@
 import React from 'react';
 import { useProjectStore } from '../store/projectStore';
+import { useCommandStore } from '../store/commandStore';
+import { UpdateFrameCommand } from '../commands/FrameCommands';
 import { FrameType, FramePoint, ProjectData, FrameAnchor } from '../types';
 import { createDefaultAnchors, updateAnchorsFromBounds, calculateRelativeOffset, calculatePositionFromAnchors, detectAnchorConflicts } from '../utils/anchorUtils';
 import { ColorPicker, Select, MultiSelect, Slider, Switch, FilePath, VectorEditor, TextArea } from './PropertyEditors';
@@ -11,7 +13,8 @@ interface PropertiesPanelProps {
 }
 
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => {
-  const { project, selectedFrameId, selectedFrameIds, updateFrame } = useProjectStore();
+  const { project, selectedFrameId, selectedFrameIds } = useProjectStore();
+  const { executeCommand } = useCommandStore();
   const selectedFrame = selectedFrameId ? project.frames[selectedFrameId] : null;
   
   // 多选模式
@@ -29,7 +32,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
   // 批量更新多个控件
   const handleBatchChange = (field: string, value: any) => {
     selectedFrameIds.forEach(id => {
-      updateFrame(id, { [field]: value });
+      executeCommand(new UpdateFrameCommand(id, { [field]: value }));
     });
   };
 
@@ -278,8 +281,8 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ onClose }) => 
       console.log('[PropertiesPanel] 更新 backdropBackgroundInsets:', value);
     }
     
-    // 更新字段
-    updateFrame(selectedFrameId, { [field]: value });
+    // 使用命令模式更新字段，支持 undo/redo
+    executeCommand(new UpdateFrameCommand(selectedFrameId, { [field]: value }));
   };
 
   return (

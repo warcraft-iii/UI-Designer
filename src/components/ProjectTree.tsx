@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
-import { ChangeParentCommand, RemoveFrameCommand } from '../commands/FrameCommands';
+import { ChangeParentCommand, RemoveFrameCommand, UpdateFrameCommand } from '../commands/FrameCommands';
 import { DuplicateCommand } from '../commands/DuplicateCommand';
 import { CreateTableArrayCommand } from '../commands/TableArrayCommand';
 import { CreateCircleArrayCommand } from '../commands/CircleArrayCommand';
@@ -17,7 +17,8 @@ interface ProjectTreeProps {
 }
 
 export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteRequest }) => {
-  const { project, selectedFrameId, selectFrame, updateFrame, setHighlightedFrames, clearHighlightedFrames } = useProjectStore();
+  const { project, selectedFrameId, selectFrame, setHighlightedFrames, clearHighlightedFrames } = useProjectStore();
+  const { executeCommand } = useCommandStore();
   
   // 管理展开/折叠状态
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(project.rootFrameIds));
@@ -200,7 +201,7 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
   // 完成重命名
   const finishRename = () => {
     if (renamingNodeId && newName.trim()) {
-      updateFrame(renamingNodeId, { name: newName.trim() });
+      executeCommand(new UpdateFrameCommand(renamingNodeId, { name: newName.trim() }));
     }
     setRenamingNodeId(null);
     setNewName('');
