@@ -14,10 +14,11 @@ import { useCommandStore } from './store/commandStore';
 import { useProjectStore } from './store/projectStore';
 import { RemoveFrameCommand, BatchRemoveFrameCommand } from './commands/FrameCommands';
 import { mpqManager } from './utils/mpqManager';
+import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import './App.css';
 
-function App() {
-  const [currentFilePath, setCurrentFilePath] = React.useState<string | null>(null);
+function AppContent() {
+  const { currentFilePath, setCurrentFilePath } = useProjectContext();
   const [showProjectTree, setShowProjectTree] = React.useState(true);
   const [showPropertiesPanel, setShowPropertiesPanel] = React.useState(true);
   const [showStylePresetPanel, setShowStylePresetPanel] = React.useState(false);
@@ -197,6 +198,14 @@ function App() {
         isVisible={showDebugPanel}
       />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ProjectProvider>
+      <AppContent />
+    </ProjectProvider>
   );
 }
 

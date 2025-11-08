@@ -14,6 +14,7 @@ import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { BackdropEdge } from './BackdropEdge';
 import { useTextureLoaderBatch } from '../hooks/useTextureLoader';
 import { ModelViewer } from './ModelViewer';
+import { useProjectContext } from '../contexts/ProjectContext';
 import './Canvas.css';
 
 const CANVAS_WIDTH = 1920;
@@ -101,6 +102,7 @@ export interface CanvasHandle {
 export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   const { project, selectedFrameId, selectFrame, toggleSelectFrame, setProject, addGuide, updateGuide, removeGuide, highlightedFrameIds } = useProjectStore();
   const { executeCommand } = useCommandStore();
+  const { projectDir } = useProjectContext(); // 获取项目目录
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(1);
   const [offset, setOffset] = React.useState({ x: 0, y: 0 });
@@ -1039,6 +1041,7 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
               {frame.type === FrameType.MODEL && frame.backgroundArt && (
                 <ModelViewer
                   modelPath={frame.backgroundArt}
+                  projectDir={projectDir || undefined}
                   width={frame.width ?? 100}
                   height={frame.height ?? 100}
                 />

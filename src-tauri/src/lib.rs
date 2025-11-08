@@ -163,6 +163,19 @@ fn parse_mdx_from_mpq(archive_path: String, file_name: String) -> Result<String,
     parse_mdx_file(mdx_data)
 }
 
+/// 从本地文件系统读取并解析 MDX 文件
+#[tauri::command]
+fn parse_mdx_from_file(file_path: String) -> Result<String, String> {
+    use std::fs;
+    
+    // 读取本地文件
+    let mdx_data = fs::read(&file_path)
+        .map_err(|e| format!("无法读取文件 {}: {}", file_path, e))?;
+    
+    // 解析 MDX
+    parse_mdx_file(mdx_data)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -176,7 +189,8 @@ pub fn run() {
             clear_mpq_cache,
             decode_blp_to_png,
             parse_mdx_file,
-            parse_mdx_from_mpq
+            parse_mdx_from_mpq,
+            parse_mdx_from_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

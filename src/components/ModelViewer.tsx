@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { invoke } from '@tauri-apps/api/core';
+import { join } from '@tauri-apps/api/path';
+import { exists } from '@tauri-apps/plugin-fs';
+import { mpqManager } from '../utils/mpqManager';
 
 interface MdxVertex {
   x: number;
@@ -39,8 +42,8 @@ interface MdxModel {
 }
 
 interface ModelViewerProps {
-  modelPath: string; // MDX 文件在 MPQ 中的路径
-  mpqPath?: string; // MPQ 档案路径（可选，默认使用主档案）
+  modelPath: string; // MDX 文件路径（相对或绝对）
+  projectDir?: string; // 项目目录（用于查找本地文件）
   width: number;
   height: number;
   className?: string;
@@ -48,7 +51,7 @@ interface ModelViewerProps {
 
 export const ModelViewer: React.FC<ModelViewerProps> = ({
   modelPath,
-  mpqPath,
+  projectDir,
   width,
   height,
   className,
@@ -119,21 +122,57 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
-      if (containerRef.current && rendererRef.current) {
+      if (containerRef.current && rendererRef.current?.domElement) {
         containerRef.current.removeChild(rendererRef.current.domElement);
       }
     };
-  }, [modelPath, mpqPath, width, height]);
+  }, [modelPath, projectDir, width, height]);
 
   const loadModel = async () => {
     try {
       if (!sceneRef.current) return;
 
-      // 调用 Rust 解析 MDX
-      const modelJson = await invoke<string>('parse_mdx_from_mpq', {
-        archivePath: mpqPath || 'war3.mpq', // 默认档案
-        fileName: modelPath,
-      });
+      let modelJson: string | null = null;
+      
+      // 策略 1: 尝试从项目本地目录加载
+      if (projectDir) {
+        try {
+          const localModelPath = await join(projectDir, modelPath);
+          
+          // 检查文件是否存在
+          if (await exists(localModelPath)) {
+            console.log('从本地文件加载 MDX:', localModelPath);
+            modelJson = await invoke<string>('parse_mdx_from_file', {
+              filePath: localModelPath,
+            });
+          }
+        } catch (localError) {
+          console.log('本地文件加载失败，尝试 MPQ:', localError);
+        }
+      }
+
+      // 策略 2: 如果本地加载失败，从 MPQ 加载
+      if (!modelJson) {
+        console.log('从 MPQ 档案加载 MDX:', modelPath);
+        const status = mpqManager.getStatus();
+        
+        if (!status.war3Path) {
+          throw new Error('未设置 War3 路径，无法从 MPQ 加载模型');
+        }
+
+        // 使用第一个可用的 MPQ 档案
+        const loadedArchive = status.archives.find(a => a.loaded);
+        if (!loadedArchive) {
+          throw new Error('没有可用的 MPQ 档案');
+        }
+
+        const mpqArchivePath = await join(status.war3Path, loadedArchive.name);
+        
+        modelJson = await invoke<string>('parse_mdx_from_mpq', {
+          archivePath: mpqArchivePath,
+          fileName: modelPath,
+        });
+      }
 
       const model: MdxModel = JSON.parse(modelJson);
       console.log('MDX 模型已加载:', model.name, model.vertices.length, '顶点');
