@@ -81,6 +81,12 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
     camera.position.set(0, 0, 500);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
+    
+    console.log('📷 相机设置:', {
+      position: camera.position,
+      fov: 45,
+      aspect: width / height
+    });
 
     // 渲染器设置
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -88,6 +94,13 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
     renderer.setPixelRatio(window.devicePixelRatio);
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
+    
+    console.log('🎨 渲染器设置:', {
+      size: [width, height],
+      containerExists: !!containerRef.current,
+      canvasInDOM: document.contains(renderer.domElement),
+      containerRect: containerRef.current.getBoundingClientRect()
+    });
 
     // 添加环境光
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -296,6 +309,13 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
 
       sceneRef.current.add(mesh);
       meshRef.current = mesh;
+      
+      console.log('✅ 模型已添加到场景:', {
+        vertices: model.vertices.length,
+        faces: model.faces.length,
+        meshVisible: mesh.visible,
+        sceneChildren: sceneRef.current.children.length
+      });
     } catch (error) {
       console.error('MDX 加载失败:', error);
       // 显示错误占位符
@@ -331,8 +351,11 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
       style={{
         width: `${width}px`,
         height: `${height}px`,
-        position: 'relative',
+        position: 'absolute',
+        top: 0,
+        left: 0,
         overflow: 'hidden',
+        pointerEvents: 'none',
       }}
     />
   );

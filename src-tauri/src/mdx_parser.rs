@@ -278,6 +278,18 @@ impl MdxParser {
                         model.uvs.push(UV { u, v });
                     }
                 }
+                b"PTYP" => {
+                    // Primitive types (face types)
+                    let count = self.cursor.read_u32::<LittleEndian>().unwrap_or(0);
+                    // 跳过面类型数据（通常是 4 = 三角形）
+                    self.cursor.seek(SeekFrom::Current((count * 4) as i64)).ok();
+                }
+                b"PCNT" => {
+                    // Primitive counts (indices per primitive)
+                    let count = self.cursor.read_u32::<LittleEndian>().unwrap_or(0);
+                    // 跳过原始计数数据
+                    self.cursor.seek(SeekFrom::Current((count * 4) as i64)).ok();
+                }
                 b"PVTX" => {
                     // Primitive vertex indices (faces)
                     let count = self.cursor.read_u32::<LittleEndian>().unwrap_or(0);
