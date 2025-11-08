@@ -4,12 +4,16 @@ import './Ruler.css';
 interface RulerProps {
   orientation: 'horizontal' | 'vertical';
   length: number; // 标尺长度（像素），水平为 1440px (对应 0.8 WC3)，垂直为 1080px (对应 0.6 WC3)
+  scale: number; // 画布缩放比例，用于动态调整刻度密度
+  offset: number; // 画布偏移量（像素），用于计算当前可视区域的 WC3 坐标
   onCreateGuide?: (orientation: 'horizontal' | 'vertical', clientX: number, clientY: number) => void; // 创建参考线回调
 }
 
 export const Ruler: React.FC<RulerProps> = ({ 
   orientation, 
   length, 
+  scale,
+  offset,
   onCreateGuide,
 }) => {
   const RULER_SIZE = 30; // 标尺宽度/高度
@@ -64,32 +68,54 @@ export const Ruler: React.FC<RulerProps> = ({
   const generateTicks = () => {
     const ticks: { position: number; label?: string; major?: boolean }[] = [];
     
-    // 固定的刻度间隔
-    const interval = 0.05; // WC3单位，小刻度
-    const majorInterval = 0.1; // 主刻度间隔
+    // 根据缩放级别动态调整刻度间隔
+    let interval = 0.05; // WC3单位，小刻度
+    let majorInterval = 0.1; // 主刻度间隔
+    
+    if (scale < 0.5) {
+      // 缩小时：使用更粗的刻度
+      interval = 0.1;
+      majorInterval = 0.2;
+    } else if (scale > 2) {
+      // 放大时：使用更细的刻度
+      interval = 0.025;
+      majorInterval = 0.05;
+    }
 
-    // 标尺的长度对应的 WC3 单位范围（固定的）
+    // 标尺的长度对应的 WC3 单位范围
     const maxWc3 = isHorizontal ? 0.8 : 0.6;
     
-    // 每个 WC3 单位对应的像素数
+    // 每个 WC3 单位对应的像素数（未缩放）
     const pixelsPerUnit = length / maxWc3;
 
-    // 标尺是固定的，不随画布平移而改变
-    // 标尺的 0px 位置永远对应 WC3 坐标 0.00
-    // 标尺的 length px 位置永远对应 WC3 坐标 maxWc3
-    for (let wc3Coord = 0; wc3Coord <= maxWc3; wc3Coord += interval) {
-      // 计算刻度在标尺上的像素位置（固定，不受 offset 影响）
-      const pixelPos = wc3Coord * pixelsPerUnit;
+    // 计算当前可视区域的 WC3 坐标范围
+    // offset 是画布的平移偏移（像素），需要转换为 WC3 坐标
+    const startWc3 = -offset / (pixelsPerUnit * scale);
+    const endWc3 = (length - offset) / (pixelsPerUnit * scale);
+
+    // 生成刻度（覆盖可视区域，稍微多一点以确保边缘也有刻度）
+    const startIndex = Math.floor(startWc3 / interval);
+    const endIndex = Math.ceil(endWc3 / interval);
+
+    // 使用索引循环，避免浮点数累积误差
+    for (let i = startIndex; i <= endIndex; i++) {
+      // 使用索引计算精确的 WC3 坐标，避免累积误差
+      const wc3Coord = i * interval;
       
-      // 修复浮点数精度问题：将坐标四舍五入到合理精度后再判断
-      const roundedCoord = Math.round(wc3Coord / interval) * interval;
-      const isMajor = Math.abs(roundedCoord % majorInterval) < 0.0001; // 主刻度显示数字
+      // 计算刻度在标尺上的像素位置
+      const pixelPos = wc3Coord * pixelsPerUnit * scale + offset;
       
-      ticks.push({
-        position: pixelPos,
-        label: isMajor ? roundedCoord.toFixed(2) : undefined,
-        major: isMajor
-      });
+      // 只渲染在标尺可见范围内的刻度
+      if (pixelPos >= 0 && pixelPos <= length) {
+        // 判断是否为主刻度：使用索引判断，避免浮点数精度问题
+        const isMajor = Math.abs(i % (majorInterval / interval)) < 0.001;
+        
+        ticks.push({
+          position: pixelPos,
+          label: isMajor ? wc3Coord.toFixed(2) : undefined,
+          major: isMajor
+        });
+      }
     }
 
     return ticks;
