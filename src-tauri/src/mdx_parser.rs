@@ -7,7 +7,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 
 // MDX 文件头结构 (4 bytes magic + version)
 const MDX_MAGIC: &[u8; 4] = b"MDLX";
-const MDL_VERSION: u32 = 800; // Warcraft III uses version 800
+// const MDL_VERSION: u32 = 800; // Warcraft III uses version 800 (未使用，保留作参考)
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MdxModel {
