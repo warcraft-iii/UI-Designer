@@ -201,7 +201,7 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
       }
 
       const model: MdxModel = JSON.parse(modelJson);
-      console.log('MDX 模型已加载:', model.name, model.vertices.length, '顶点');
+      console.log('MDX 模型已加载:', model.name, model.vertices.length, '顶点', model.faces.length, '面');
 
       // 创建 Three.js 几何体
       const geometry = new THREE.BufferGeometry();
@@ -214,6 +214,11 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
         positions[i * 3 + 2] = v.z;
       });
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      console.log('顶点范围:', {
+        x: [Math.min(...model.vertices.map(v => v.x)), Math.max(...model.vertices.map(v => v.x))],
+        y: [Math.min(...model.vertices.map(v => v.y)), Math.max(...model.vertices.map(v => v.y))],
+        z: [Math.min(...model.vertices.map(v => v.z)), Math.max(...model.vertices.map(v => v.z))]
+      });
 
       // 法线数据
       if (model.normals.length === model.vertices.length) {
@@ -265,9 +270,18 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
       const center = boundingBox.getCenter(new THREE.Vector3());
       const size = boundingBox.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
+      
+      console.log('模型边界:', {
+        center: center,
+        size: size,
+        maxDim: maxDim
+      });
+      
       const scale = 200 / maxDim; // 缩放到合适大小
       mesh.scale.setScalar(scale);
-      mesh.position.sub(center.multiplyScalar(scale));
+      mesh.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+      
+      console.log('缩放后位置:', mesh.position, '缩放:', scale);
 
       // 移除旧模型，添加新模型
       if (meshRef.current) {

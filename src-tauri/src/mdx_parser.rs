@@ -278,11 +278,24 @@ impl MdxParser {
                         model.uvs.push(UV { u, v });
                     }
                 }
-                b"PVTX" | b"GNDX" | b"MTGC" | b"MATS" => {
+                b"PVTX" => {
+                    // Primitive vertex indices (faces)
+                    let count = self.cursor.read_u32::<LittleEndian>().unwrap_or(0);
+                    
+                    // PVTX 包含三角形索引，每3个u16组成一个面
+                    for _ in 0..(count / 3) {
+                        let i0 = self.cursor.read_u16::<LittleEndian>().unwrap_or(0);
+                        let i1 = self.cursor.read_u16::<LittleEndian>().unwrap_or(0);
+                        let i2 = self.cursor.read_u16::<LittleEndian>().unwrap_or(0);
+                        model.faces.push(Face {
+                            indices: [i0, i1, i2],
+                        });
+                    }
+                }
+                b"GNDX" | b"MTGC" | b"MATS" => {
                     // 其他 geoset 数据，暂时跳过
                     let count = self.cursor.read_u32::<LittleEndian>().unwrap_or(0);
                     let skip_size = match &chunk_id {
-                        b"PVTX" => count * 2,  // u16 indices
                         b"GNDX" => count * 1,  // u8 group indices
                         b"MTGC" => count * 4,  // u32 matrix counts
                         b"MATS" => count * 4,  // u32 matrix indices
