@@ -1,45 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import { invoke } from '@tauri-apps/api/core';
+import React, { useEffect, useRef, useState } from 'react';
+import { vec3, mat4, quat } from 'gl-matrix';
 import { join } from '@tauri-apps/api/path';
-import { exists } from '@tauri-apps/plugin-fs';
+import { exists, readFile } from '@tauri-apps/plugin-fs';
 import { mpqManager } from '../utils/mpqManager';
-
-interface MdxVertex {
-  x: number;
-  y: number;
-  z: number;
-}
-
-interface MdxNormal {
-  x: number;
-  y: number;
-  z: number;
-}
-
-interface MdxUV {
-  u: number;
-  v: number;
-}
-
-interface MdxFace {
-  indices: [number, number, number];
-}
-
-interface MdxBoundingBox {
-  min: MdxVertex;
-  max: MdxVertex;
-}
-
-interface MdxModel {
-  version: number;
-  name: string;
-  vertices: MdxVertex[];
-  normals: MdxNormal[];
-  uvs: MdxUV[];
-  faces: MdxFace[];
-  bounds: MdxBoundingBox;
-}
+// @ts-ignore
+import { parseMDX } from 'war3-model/mdx/parse';
+// @ts-ignore  
+import { ModelRenderer } from 'war3-model/renderer/modelRenderer';
 
 interface ModelViewerProps {
   modelPath: string; // MDX 文件路径（相对或绝对）
@@ -49,6 +16,33 @@ interface ModelViewerProps {
   className?: string;
 }
 
+function calcCameraQuat(position: vec3, target: vec3): quat {
+  const dir = vec3.create();
+  vec3.subtract(dir, target, position);
+  vec3.normalize(dir, dir);
+
+  const up = vec3.fromValues(0, 0, 1);
+  const right = vec3.create();
+  vec3.cross(right, up, dir);
+  vec3.normalize(right, dir);
+
+  const actualUp = vec3.create();
+  vec3.cross(actualUp, dir, right);
+
+  const rotationMatrix = mat4.create();
+  mat4.set(
+    rotationMatrix,
+    right[0], right[1], right[2], 0,
+    actualUp[0], actualUp[1], actualUp[2], 0,
+    dir[0], dir[1], dir[2], 0,
+    0, 0, 0, 1
+  );
+
+  const rotation = quat.create();
+  mat4.getRotation(rotation, rotationMatrix);
+  return rotation;
+}
+
 export const ModelViewer: React.FC<ModelViewerProps> = ({
   modelPath,
   projectDir,
@@ -56,305 +50,169 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
   height,
   className,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const meshRef = useRef<THREE.Mesh | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const modelRendererRef = useRef<ModelRenderer | null>(null);
+  const glRef = useRef<WebGLRenderingContext | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const [error, setError] = useState<string | null>(null);
 
+  // 分离的 useEffect: 处理模型加载
   useEffect(() => {
-    if (!containerRef.current || !modelPath) return;
+    if (!canvasRef.current || !modelPath) return;
 
-    // 初始化 Three.js 场景
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
-    sceneRef.current = scene;
+    let cancelled = false;
+    const canvas = canvasRef.current;
 
-    // 相机设置
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      width / height,
-      0.1,
-      1000
-    );
-    camera.position.set(0, 0, 500);
-    camera.lookAt(0, 0, 0);
-    cameraRef.current = camera;
-    
-    console.log('📷 相机设置:', {
-      position: camera.position,
-      fov: 45,
-      aspect: width / height
-    });
+    const loadAndRenderModel = async () => {
+      try {
+        setError(null);
 
-    // 渲染器设置
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    containerRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
-    
-    console.log('🎨 渲染器设置:', {
-      size: [width, height],
-      containerExists: !!containerRef.current,
-      canvasInDOM: document.contains(renderer.domElement),
-      containerRect: containerRef.current.getBoundingClientRect()
-    });
+        // 尝试本地加载
+        let modelBuffer: ArrayBuffer | null = null;
+        
+        if (projectDir) {
+          const fullPath = await join(projectDir, modelPath);
+          const fileExists = await exists(fullPath);
+          
+          if (fileExists) {
+            const uint8Array = await readFile(fullPath);
+            modelBuffer = uint8Array.buffer;
+            console.log(`✅ 从本地加载 MDX: ${fullPath}`);
+          }
+        }
 
-    // 添加环境光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
+        // 如果本地不存在，从 MPQ 加载
+        if (!modelBuffer) {
+          console.log(`🔍 从 MPQ 档案加载: ${modelPath}`);
+          modelBuffer = await mpqManager.readFile(modelPath);
+          
+          if (modelBuffer) {
+            console.log(`✅ 从 MPQ 加载成功`);
+          }
+        }
 
-    // 添加定向光
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(1, 1, 1);
-    scene.add(directionalLight);
+        if (!modelBuffer) {
+          throw new Error(`无法加载模型: ${modelPath}`);
+        }
 
-    // 加载并解析 MDX 模型
-    loadModel();
+        if (cancelled) return;
 
-    // 动画循环
-    const animate = () => {
-      animationFrameRef.current = requestAnimationFrame(animate);
-      
-      // 旋转模型
-      if (meshRef.current) {
-        meshRef.current.rotation.y += 0.01;
+        // 解析 MDX
+        const model = parseMDX(modelBuffer);
+        console.log('📦 MDX 模型已解析:', {
+          name: model.Name,
+          geosets: model.Geosets?.length || 0,
+          textures: model.Textures?.length || 0,
+          sequences: model.Sequences?.length || 0
+        });
+
+        // 创建 ModelRenderer
+        const modelRenderer = new ModelRenderer(model);
+        modelRendererRef.current = modelRenderer;
+
+        // 初始化 WebGL
+        let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
+        try {
+          gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+          if (!gl) {
+            throw new Error('无法创建 WebGL 上下文');
+          }
+
+          gl.clearColor(0.1, 0.1, 0.1, 1.0);
+          gl.enable(gl.DEPTH_TEST);
+          gl.depthFunc(gl.LEQUAL);
+          gl.viewport(0, 0, canvas.width, canvas.height);
+
+          glRef.current = gl as WebGLRenderingContext;
+          modelRenderer.initGL(gl as WebGLRenderingContext);
+
+          console.log('🎨 WebGL 上下文已初始化');
+        } catch (err) {
+          console.error('WebGL 初始化失败:', err);
+          throw err;
+        }
+
+        // 设置相机和矩阵
+        const pMatrix = mat4.create();
+        const mvMatrix = mat4.create();
+        
+        const cameraPos = vec3.fromValues(0, -300, 100);
+        const cameraTarget = vec3.fromValues(0, 0, 50);
+        const cameraUp = vec3.fromValues(0, 0, 1);
+        const cameraQuat = calcCameraQuat(cameraPos, cameraTarget);
+
+        mat4.perspective(pMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 3000.0);
+        mat4.lookAt(mvMatrix, cameraPos, cameraTarget, cameraUp);
+
+        modelRenderer.setCamera(cameraPos, cameraQuat);
+
+        // 设置默认团队颜色
+        modelRenderer.setTeamColor([1.0, 0.0, 0.0]);
+
+        // 如果有动画，播放第一个
+        if (model.Sequences && model.Sequences.length > 0) {
+          const firstSeq = model.Sequences[0];
+          modelRenderer.setSequence(0);
+          console.log(`🎬 播放动画: ${firstSeq.Name || 'Sequence 0'}`);
+        }
+
+        // 渲染循环
+        startTimeRef.current = performance.now();
+        const animate = (timestamp: number) => {
+          if (cancelled) return;
+
+          const delta = timestamp - startTimeRef.current;
+          startTimeRef.current = timestamp;
+
+          // 更新模型动画
+          modelRenderer.update(delta);
+
+          // 清除画布
+          gl!.clear(gl!.COLOR_BUFFER_BIT | gl!.DEPTH_BUFFER_BIT);
+
+          // 渲染模型
+          modelRenderer.render(mvMatrix, pMatrix, {
+            wireframe: false
+          });
+
+          animationFrameRef.current = requestAnimationFrame(animate);
+        };
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+
+      } catch (err) {
+        console.error('❌ 模型加载失败:', err);
+        setError(err instanceof Error ? err.message : String(err));
       }
-      
-      renderer.render(scene, camera);
     };
-    animate();
 
-    // 清理函数
+    loadAndRenderModel();
+
     return () => {
+      cancelled = true;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-      }
-      if (containerRef.current && rendererRef.current?.domElement) {
-        containerRef.current.removeChild(rendererRef.current.domElement);
-      }
     };
-  }, [modelPath, projectDir, width, height]);
+  }, [modelPath, projectDir]);
 
-  const loadModel = async () => {
-    try {
-      if (!sceneRef.current) return;
+  // 分离的 useEffect: 处理尺寸变化
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    canvas.width = width;
+    canvas.height = height;
 
-      let modelJson: string | null = null;
-      
-      // 策略 1: 尝试从项目本地目录加载
-      if (projectDir) {
-        try {
-          const localModelPath = await join(projectDir, modelPath);
-          
-          // 检查文件是否存在
-          if (await exists(localModelPath)) {
-            console.log('从本地文件加载 MDX:', localModelPath);
-            modelJson = await invoke<string>('parse_mdx_from_file', {
-              filePath: localModelPath,
-            });
-          }
-        } catch (localError) {
-          console.log('本地文件加载失败，尝试 MPQ:', localError);
-        }
-      }
-
-      // 策略 2: 如果本地加载失败，从 MPQ 加载
-      if (!modelJson) {
-        console.log('从 MPQ 档案加载 MDX:', modelPath);
-        const status = mpqManager.getStatus();
-        
-        if (!status.war3Path) {
-          throw new Error('未设置 War3 路径，无法从 MPQ 加载模型');
-        }
-
-        // 尝试所有已加载的 MPQ 档案
-        const loadedArchives = status.archives.filter(a => a.loaded);
-        if (loadedArchives.length === 0) {
-          throw new Error('没有可用的 MPQ 档案');
-        }
-
-        let lastError: Error | null = null;
-        
-        for (const archive of loadedArchives) {
-          try {
-            const mpqArchivePath = await join(status.war3Path, archive.name);
-            console.log(`尝试从 ${archive.name} 加载: ${modelPath}`);
-            
-            modelJson = await invoke<string>('parse_mdx_from_mpq', {
-              archivePath: mpqArchivePath,
-              fileName: modelPath,
-            });
-            
-            if (modelJson) {
-              console.log('从 MPQ 档案加载成功:', archive.name);
-              break;
-            }
-          } catch (error) {
-            console.log(`从 ${archive.name} 加载失败:`, error);
-            lastError = error as Error;
-            // 继续尝试下一个档案
-          }
-        }
-        
-        // 如果所有档案都失败，抛出最后的错误
-        if (!modelJson && lastError) {
-          throw lastError;
-        }
-      }
-
-      // 如果仍然没有加载成功，抛出错误
-      if (!modelJson) {
-        throw new Error('无法从本地或 MPQ 加载模型: ' + modelPath);
-      }
-
-      const model: MdxModel = JSON.parse(modelJson);
-      console.log('MDX 模型已加载:', model.name, model.vertices.length, '顶点', model.faces.length, '面');
-
-      // 创建 Three.js 几何体
-      const geometry = new THREE.BufferGeometry();
-
-      // 顶点数据
-      const positions = new Float32Array(model.vertices.length * 3);
-      model.vertices.forEach((v, i) => {
-        positions[i * 3] = v.x;
-        positions[i * 3 + 1] = v.y;
-        positions[i * 3 + 2] = v.z;
-      });
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      console.log('顶点范围:', {
-        x: [Math.min(...model.vertices.map(v => v.x)), Math.max(...model.vertices.map(v => v.x))],
-        y: [Math.min(...model.vertices.map(v => v.y)), Math.max(...model.vertices.map(v => v.y))],
-        z: [Math.min(...model.vertices.map(v => v.z)), Math.max(...model.vertices.map(v => v.z))]
-      });
-
-      // 法线数据
-      if (model.normals.length === model.vertices.length) {
-        const normals = new Float32Array(model.normals.length * 3);
-        model.normals.forEach((n, i) => {
-          normals[i * 3] = n.x;
-          normals[i * 3 + 1] = n.y;
-          normals[i * 3 + 2] = n.z;
-        });
-        geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-      } else {
-        geometry.computeVertexNormals();
-      }
-
-      // UV 数据
-      if (model.uvs.length > 0) {
-        const uvs = new Float32Array(model.uvs.length * 2);
-        model.uvs.forEach((uv, i) => {
-          uvs[i * 2] = uv.u;
-          uvs[i * 2 + 1] = uv.v;
-        });
-        geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-      }
-
-      // 面数据（索引）
-      if (model.faces.length > 0) {
-        const indices = new Uint16Array(model.faces.length * 3);
-        model.faces.forEach((face, i) => {
-          indices[i * 3] = face.indices[0];
-          indices[i * 3 + 1] = face.indices[1];
-          indices[i * 3 + 2] = face.indices[2];
-        });
-        geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-      }
-
-      // 材质（默认灰色）
-      const material = new THREE.MeshStandardMaterial({
-        color: 0x888888,
-        metalness: 0.3,
-        roughness: 0.7,
-        side: THREE.DoubleSide,
-      });
-
-      // 创建 Mesh
-      const mesh = new THREE.Mesh(geometry, material);
-
-      // 自动缩放以适应视口
-      const boundingBox = new THREE.Box3().setFromObject(mesh);
-      const center = boundingBox.getCenter(new THREE.Vector3());
-      const size = boundingBox.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      
-      console.log('模型边界:', {
-        center: center,
-        size: size,
-        maxDim: maxDim
-      });
-      
-      const scale = 200 / maxDim; // 缩放到合适大小
-      mesh.scale.setScalar(scale);
-      
-      // 将模型中心移到原点
-      mesh.position.set(0, 0, 0);
-      mesh.geometry.translate(-center.x, -center.y, -center.z);
-      
-      console.log('缩放后:', {
-        scale: scale,
-        center: center,
-        size: size,
-        meshPosition: mesh.position
-      });
-
-      // 移除旧模型，添加新模型
-      if (meshRef.current) {
-        sceneRef.current.remove(meshRef.current);
-        meshRef.current.geometry.dispose();
-        if (Array.isArray(meshRef.current.material)) {
-          meshRef.current.material.forEach((m) => m.dispose());
-        } else {
-          meshRef.current.material.dispose();
-        }
-      }
-
-      sceneRef.current.add(mesh);
-      meshRef.current = mesh;
-      
-      console.log('✅ 模型已添加到场景:', {
-        vertices: model.vertices.length,
-        faces: model.faces.length,
-        meshVisible: mesh.visible,
-        sceneChildren: sceneRef.current.children.length
-      });
-    } catch (error) {
-      console.error('MDX 加载失败:', error);
-      // 显示错误占位符
-      showErrorPlaceholder(String(error));
+    // 如果已经有 GL 上下文，更新视口
+    if (glRef.current) {
+      glRef.current.viewport(0, 0, width, height);
     }
-  };
-
-  const showErrorPlaceholder = (errorMessage: string) => {
-    if (!sceneRef.current) return;
-
-    // 创建一个简单的立方体作为错误指示
-    const geometry = new THREE.BoxGeometry(100, 100, 100);
-    const material = new THREE.MeshBasicMaterial({ 
-      color: 0xff0000, 
-      wireframe: true 
-    });
-    const cube = new THREE.Mesh(geometry, material);
-
-    if (meshRef.current) {
-      sceneRef.current.remove(meshRef.current);
-    }
-
-    sceneRef.current.add(cube);
-    meshRef.current = cube;
-
-    console.error('模型加载失败:', errorMessage);
-  };
+  }, [width, height]);
 
   return (
-    <div
-      ref={containerRef}
+    <div 
       className={className}
       style={{
         width: `${width}px`,
@@ -364,11 +222,42 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
         left: 0,
         overflow: 'hidden',
         pointerEvents: 'none',
-        border: '2px solid red', // 调试用：显示容器边界
-        backgroundColor: 'rgba(255, 0, 0, 0.1)', // 调试用：半透明红色背景
       }}
-    />
+    >
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%'
+        }}
+      />
+      {error && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: '#ff4444',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            fontSize: '14px',
+            textAlign: 'center'
+          }}
+        >
+          {error}
+        </div>
+      )}
+    </div>
   );
 };
 
 export default ModelViewer;
+
