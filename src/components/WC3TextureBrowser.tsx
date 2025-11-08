@@ -241,7 +241,6 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
       
       // 2. 获取当前目录的文件
       const fileList = mpqManager.listDirectory(normalizedDir);
-      const textureExtensions = ['.blp', '.tga', '.dds', '.png', '.jpg'];
       
       fileList.forEach(fileInfo => {
         const fileName = fileInfo.fileName;
@@ -257,14 +256,12 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
           // 只要当前目录的直接文件（不包含子目录中的文件）
           if (parts.length === 1) {
             const name = parts[0];
-            const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
-            if (textureExtensions.includes(ext)) {
-              files.push({
-                path: fileName,
-                name: name,
-                isDirectory: false,
-              });
-            }
+            // 显示所有文件（不过滤扩展名）
+            files.push({
+              path: fileName,
+              name: name,
+              isDirectory: false,
+            });
           }
         }
       });
@@ -295,7 +292,8 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
 
     setLoading(true);
     try {
-      const results = mpqManager.searchFiles(`*${query}*.blp`);
+      // 搜索所有文件，不限制扩展名
+      const results = mpqManager.searchFiles(`*${query}*`);
       
       const files: TextureItem[] = results.map(fileInfo => ({
         path: fileInfo.fileName,
@@ -533,7 +531,7 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
           <div className="search-container">
             <input
               type="text"
-              placeholder="搜索纹理..."
+              placeholder="搜索文件..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
