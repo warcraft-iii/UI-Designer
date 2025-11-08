@@ -19,6 +19,64 @@ const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
 const MARGIN = 240; // 4:3区域边距
 
+// BackdropBackground 内部组件 - 避免 IIFE 导致的渲染问题
+const BackdropBackground: React.FC<{
+  frame: FrameData;
+  textureMap: Map<string, any>;
+  isSelected: boolean;
+  canvasWidth: number;
+  canvasHeight: number;
+  margin: number;
+}> = ({ frame, textureMap, isSelected, canvasWidth, canvasHeight, margin }) => {
+  const leftInset = frame.backdropBackgroundInsets 
+    ? (frame.backdropBackgroundInsets[0] / 0.8) * (canvasWidth - 2 * margin)
+    : 0;
+  const topInset = frame.backdropBackgroundInsets 
+    ? (frame.backdropBackgroundInsets[1] / 0.6) * canvasHeight
+    : 0;
+  const rightInset = frame.backdropBackgroundInsets 
+    ? (frame.backdropBackgroundInsets[2] / 0.8) * (canvasWidth - 2 * margin)
+    : 0;
+  const bottomInset = frame.backdropBackgroundInsets 
+    ? (frame.backdropBackgroundInsets[3] / 0.6) * canvasHeight
+    : 0;
+  
+  const textureState = frame.backdropBackground ? textureMap.get(frame.backdropBackground) : undefined;
+  const bgImage = textureState?.url ? `url(${textureState.url})` : undefined;
+  
+  // 调试日志
+  if (isSelected) {
+    console.log('[Canvas] Backdrop 背景渲染', {
+      backdropBackgroundInsets: frame.backdropBackgroundInsets,
+      计算的insets像素: { leftInset, topInset, rightInset, bottomInset },
+      backgroundImage: bgImage ? '已加载' : '未加载',
+    });
+  }
+  
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: leftInset,
+        top: topInset,
+        right: rightInset,
+        bottom: bottomInset,
+        backgroundImage: bgImage,
+        backgroundSize: frame.backdropTileBackground 
+          ? (frame.backdropBackgroundSize 
+              ? `${(frame.backdropBackgroundSize / 0.8) * (canvasWidth - 2 * margin)}px` 
+              : 'auto')
+          : 'cover',
+        backgroundRepeat: frame.backdropTileBackground ? 'repeat' : 'no-repeat',
+        backgroundPosition: 'center center',
+        pointerEvents: 'none',
+        // 临时：添加边框以便调试
+        border: isSelected ? '2px dashed red' : undefined,
+      }}
+    />
+  );
+};
+
 // 辅助函数：将RGBA数组转换为CSS颜色字符串
 const rgbaToCSS = (rgba: [number, number, number, number] | undefined): string | undefined => {
   if (!rgba) return undefined;
@@ -897,36 +955,13 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
           >
             {/* Backdrop 背景纹理（带内边距） */}
             {frame.backdropBackground && (
-              <div
-                style={{
-                  position: 'absolute',
-                  // backdropBackgroundInsets 格式: [left, top, right, bottom]
-                  // 左右使用横向比例 0.8，上下使用纵向比例 0.6
-                  left: frame.backdropBackgroundInsets 
-                    ? (frame.backdropBackgroundInsets[0] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)
-                    : 0,
-                  top: frame.backdropBackgroundInsets 
-                    ? (frame.backdropBackgroundInsets[1] / 0.6) * CANVAS_HEIGHT
-                    : 0,
-                  right: frame.backdropBackgroundInsets 
-                    ? (frame.backdropBackgroundInsets[2] / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)
-                    : 0,
-                  bottom: frame.backdropBackgroundInsets 
-                    ? (frame.backdropBackgroundInsets[3] / 0.6) * CANVAS_HEIGHT
-                    : 0,
-                  backgroundImage: (() => {
-                    const textureState = textureMap.get(frame.backdropBackground);
-                    return textureState?.url ? `url(${textureState.url})` : undefined;
-                  })(),
-                  backgroundSize: frame.backdropTileBackground 
-                    ? (frame.backdropBackgroundSize 
-                        ? `${(frame.backdropBackgroundSize / 0.8) * (CANVAS_WIDTH - 2 * MARGIN)}px` 
-                        : 'auto')
-                    : 'cover',
-                  backgroundRepeat: frame.backdropTileBackground ? 'repeat' : 'no-repeat',
-                  backgroundPosition: 'center center',
-                  pointerEvents: 'none',
-                }}
+              <BackdropBackground
+                frame={frame}
+                textureMap={textureMap}
+                isSelected={isSelected}
+                canvasWidth={CANVAS_WIDTH}
+                canvasHeight={CANVAS_HEIGHT}
+                margin={MARGIN}
               />
             )}
 
