@@ -349,6 +349,24 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
     }
   };
 
+  // 判断文件是否为图片格式
+  const isImageFile = (fileName: string): boolean => {
+    const imageExtensions = ['.blp', '.tga', '.dds', '.png', '.jpg', '.jpeg', '.bmp'];
+    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+    return imageExtensions.includes(ext);
+  };
+
+  // 获取文件图标
+  const getFileIcon = (fileName: string): string => {
+    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+    if (ext === '.mdx' || ext === '.mdl') return '🎭'; // 3D 模型
+    if (ext === '.fdf') return '📄'; // FDF 文件
+    if (ext === '.txt') return '📝'; // 文本文件
+    if (ext === '.slk') return '📊'; // 表格文件
+    if (ext === '.mp3' || ext === '.wav') return '🎵'; // 音频文件
+    return '📄'; // 默认文件图标
+  };
+
   // 打开图片预览（异步加载）
   const handlePreviewImage = async (item: TextureItem) => {
     if (!item.isDirectory) {
@@ -619,7 +637,7 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
                   >
                     {item.isDirectory ? (
                       <div className="directory-icon">📁</div>
-                    ) : (
+                    ) : isImageFile(item.name) ? (
                       <div onClick={(e) => {
                         e.stopPropagation();
                         handlePreviewImage(item);
@@ -628,6 +646,10 @@ export const WC3TextureBrowser: React.FC<WC3TextureBrowserProps> = ({
                           path={item.path}
                           name={item.name}
                         />
+                      </div>
+                    ) : (
+                      <div className="file-icon-large">
+                        {getFileIcon(item.name)}
                       </div>
                     )}
                     <div className="item-name" title={item.name}>
