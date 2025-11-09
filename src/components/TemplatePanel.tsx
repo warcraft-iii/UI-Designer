@@ -36,8 +36,6 @@ export const TemplatePanel: React.FC = () => {
       tooltip: false,
       isRelative: false,
       visible: true,
-      diskTexture: '',
-      wc3Texture: '',
       ...templateData,
     } as FrameData;
     
@@ -62,8 +60,6 @@ export const TemplatePanel: React.FC = () => {
         tooltip: false,
         isRelative: false,
         visible: true,
-        diskTexture: '',
-        wc3Texture: '',
         ...templateData,
       } as FrameData;
       

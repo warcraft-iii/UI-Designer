@@ -29,8 +29,6 @@ export const SidePanel: React.FC = () => {
       tooltip: false,
       isRelative: false,
       visible: true,
-      diskTexture: '',
-      wc3Texture: '',
       ...templateData,
     } as FrameData;
     
@@ -53,8 +51,6 @@ export const SidePanel: React.FC = () => {
         tooltip: false,
         isRelative: false,
         visible: true,
-        diskTexture: '',
-        wc3Texture: '',
         ...templateData,
       } as FrameData;
       
