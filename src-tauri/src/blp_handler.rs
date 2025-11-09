@@ -47,17 +47,21 @@ pub fn get_blp_info(blp_data: &[u8]) -> Result<BlpInfo, String> {
     let blp = ImageBlp::from_buf(blp_data)
         .map_err(|e| format!("BLP 解析失败: {:?}", e))?;
     
-    let format = match blp.encoding {
+    // blp crate 使用 compression 字段而不是 encoding
+    let format = match blp.compression {
         1 => "JPEG",
         2 => "Paletted",
-        3 => "DXT1/DXT3/DXT5",
+        3 => "DXT",
         _ => "Unknown",
     };
+    
+    // 计算 mipmap 数量（从 mipmaps 数组长度获取）
+    let mipmap_count = blp.mipmaps.len();
     
     Ok(BlpInfo {
         width: blp.width,
         height: blp.height,
-        mipmap_count: blp.mipmap_count as usize,
+        mipmap_count,
         format: format.to_string(),
     })
 }
@@ -87,12 +91,14 @@ pub fn decode_blp_mipmap(blp_data: &[u8], mipmap_level: usize) -> Result<BlpImag
     let mut blp = ImageBlp::from_buf(blp_data)
         .map_err(|e| format!("BLP 解析失败: {:?}", e))?;
     
-    if mipmap_level >= blp.mipmap_count as usize {
-        return Err(format!("Mipmap 层级 {} 超出范围 (最大: {})", mipmap_level, blp.mipmap_count - 1));
+    let mipmap_count = blp.mipmaps.len();
+    
+    if mipmap_level >= mipmap_count {
+        return Err(format!("Mipmap 层级 {} 超出范围 (最大: {})", mipmap_level, mipmap_count - 1));
     }
     
     // 解码指定的 mipmap
-    let mut decode_flags = vec![false; blp.mipmap_count as usize];
+    let mut decode_flags = vec![false; mipmap_count];
     decode_flags[mipmap_level] = true;
     
     blp.decode(blp_data, &decode_flags)
@@ -114,8 +120,6 @@ pub fn decode_blp_mipmap(blp_data: &[u8], mipmap_level: usize) -> Result<BlpImag
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_decode_blp() {
         // 这里可以添加测试代码
