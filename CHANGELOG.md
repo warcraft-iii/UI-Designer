@@ -1,5 +1,19 @@
 # 更新日志
 
+## [0.1.2] - 2025-01-10
+
+### 修复
+- 修复 GitHub Actions 构建配置，确保正确生成 latest.json 更新文件
+- 修复 Tauri 签名环境变量名称（Tauri v2 使用新的变量名）
+
+### 改进
+- 使用 Git Tag 作为版本号的唯一来源
+- GitHub Actions 自动从 tag 提取版本号并更新所有配置文件
+- AboutDialog 在生产环境使用 Tauri API 动态获取版本号
+
+### 文档
+- 添加详细的版本管理指南（docs/VERSION_MANAGEMENT.md）
+
 ## [0.1.1] - 2025-01-10
 
 ### 修复

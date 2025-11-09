@@ -67,8 +67,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'WC3 UI Designer ${{ github.ref_name }}'
@@ -82,16 +82,9 @@ jobs:
             #### Windows
             下载 `.exe` 安装包并运行
             
-            #### macOS
-            下载 `.dmg` 文件并拖拽到 Applications
-            
-            #### Linux
-            下载 `.AppImage` 文件，添加执行权限后运行
-            
             ---
             
             **完整文档**: https://github.com/dulingzhi/UI-Designer
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
-          args: --verbose
