@@ -1,9 +1,9 @@
 /**
  * BLP 解码 Web Worker
- * 在后台线程中解码 BLP 图像，避免阻塞主线程
+ * 在后台线程中使用 Rust 解码 BLP 图像，避免阻塞主线程
  */
 
-import { BLPDecoder } from '../utils/blpDecoder';
+import { decodeBLPToRGBA, blpImageDataToImageData } from '../utils/rustBridge';
 
 interface WorkerMessage {
   id: string;
@@ -22,9 +22,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
   const { id, buffer } = e.data;
   
   try {
-    // 解码 BLP
-    const decoder = new BLPDecoder(buffer);
-    const imageData = decoder.decode();
+    // 使用 Rust 解码 BLP
+    const blpImageData = await decodeBLPToRGBA(new Uint8Array(buffer));
+    const imageData = blpImageDataToImageData(blpImageData);
     
     // 将 ImageData 转换为 DataURL
     const canvas = new OffscreenCanvas(imageData.width, imageData.height);

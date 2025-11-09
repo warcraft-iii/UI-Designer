@@ -3,8 +3,9 @@ import { vec3, mat4, quat } from 'gl-matrix';
 import { join } from '@tauri-apps/api/path';
 import { exists, readFile } from '@tauri-apps/plugin-fs';
 import { mpqManager } from '../utils/mpqManager';
+import { decodeBLPToRGBA, blpImageDataToImageData } from '../utils/rustBridge';
 // @ts-ignore - war3-model 是 TypeScript 源码，没有类型定义
-import { parseMDX, ModelRenderer, decodeBLP, getBLPImageData } from 'war3-model';
+import { parseMDX, ModelRenderer } from 'war3-model';
 
 // 添加样式到 head
 if (typeof document !== 'undefined') {
@@ -226,17 +227,17 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
                 return;
               }
 
-              // 解码 BLP 为 BLPImage
-              const blpImage = decodeBLP(blpBuffer);
+              // 使用 Rust 解码 BLP 为 RGBA 数据
+              const blpImageData = await decodeBLPToRGBA(new Uint8Array(blpBuffer));
               
-              // 获取 mipmap level 0 的 ImageData
-              const imageData = getBLPImageData(blpImage, 0);
-              
-              if (!imageData) {
+              if (!blpImageData) {
                 console.warn(`⚠️ BLP 解码失败: ${texturePath}`);
                 return;
               }
 
+              // 转换为 ImageData
+              const imageData = blpImageDataToImageData(blpImageData);
+              
               // 创建 Image 对象
               const canvas = document.createElement('canvas');
               canvas.width = imageData.width;
@@ -244,13 +245,7 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
               const ctx = canvas.getContext('2d');
               
               if (ctx) {
-                // 将 ImageData 转换为标准 ImageData (处理 colorSpace)
-                const standardImageData = new ImageData(
-                  new Uint8ClampedArray(imageData.data),
-                  imageData.width,
-                  imageData.height
-                );
-                ctx.putImageData(standardImageData, 0, 0);
+                ctx.putImageData(imageData, 0, 0);
                 
                 const img = new Image();
                 img.onload = () => {
