@@ -56,30 +56,42 @@ export class MPQManager {
   private archives: Map<string, MPQArchiveInfo> = new Map();
   private war3Path: string = '';
   private fileListCache: Map<string, FileSearchResult> = new Map();
+  private isLoading: boolean = false; // 添加加载中标志
   
   /**
    * 设置 Warcraft 3 安装路径
    */
   async setWar3Path(path: string): Promise<void> {
+    // 如果路径相同且正在加载中或已经加载过，跳过重复加载
+    if (this.war3Path === path && (this.isLoading || this.archives.size > 0)) {
+      console.log(`[MPQManager] War3 路径未改变 ${this.isLoading ? '(正在加载中)' : '(档案已加载)'}，跳过重复加载: ${path}`);
+      return;
+    }
+    
     this.war3Path = path;
+    this.isLoading = true; // 设置加载中标志
     
     // 清空现有档案
     this.unloadAll();
     
     console.log(`[MPQManager] War3 路径已设置: ${path}`);
     
-    // 自动加载标准 MPQ 档案
-    console.log('[MPQManager] 开始加载 MPQ 档案...');
-    const result = await this.loadStandardArchives();
-    console.log(`[MPQManager] MPQ 加载结果: ${result.success} 成功, ${result.failed} 失败`);
-    console.log(`[MPQManager] 文件缓存大小: ${this.fileListCache.size} 个文件`);
-    
-    // 加载 war3skins.txt 更新纹理映射
     try {
-      const { loadWar3Skins } = await import('./textureLoader');
-      await loadWar3Skins();
-    } catch (error) {
-      console.error('[MPQManager] 加载 war3skins.txt 失败:', error);
+      // 自动加载标准 MPQ 档案
+      console.log('[MPQManager] 开始加载 MPQ 档案...');
+      const result = await this.loadStandardArchives();
+      console.log(`[MPQManager] MPQ 加载结果: ${result.success} 成功, ${result.failed} 失败`);
+      console.log(`[MPQManager] 文件缓存大小: ${this.fileListCache.size} 个文件`);
+      
+      // 加载 war3skins.txt 更新纹理映射
+      try {
+        const { loadWar3Skins } = await import('./textureLoader');
+        await loadWar3Skins();
+      } catch (error) {
+        console.error('[MPQManager] 加载 war3skins.txt 失败:', error);
+      }
+    } finally {
+      this.isLoading = false; // 加载完成，重置标志
     }
   }
   
