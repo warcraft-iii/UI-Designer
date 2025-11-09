@@ -9,6 +9,7 @@ import { FrameGroupPanel } from './components/FrameGroupPanel';
 import { SidePanel } from './components/SidePanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { DebugPanel } from './components/DebugPanel';
+import { UpdateChecker } from './components/UpdateChecker';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useCommandStore } from './store/commandStore';
 import { useProjectStore } from './store/projectStore';
@@ -197,6 +198,9 @@ function AppContent() {
         scale={canvasScale}
         isVisible={showDebugPanel}
       />
+
+      {/* 更新检查器 */}
+      <UpdateChecker checkOnMount={true} />
     </div>
   );
 }

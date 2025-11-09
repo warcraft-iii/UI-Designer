@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest]
+        # 如果需要多平台支持，取消注释：
+        # platform: [windows-latest, macos-latest, ubuntu-latest]
+    
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'WC3 UI Designer ${{ github.ref_name }}'
+          releaseBody: |
+            ## 更新内容
+            
+            查看完整更新日志：[CHANGELOG.md](https://github.com/dulingzhi/UI-Designer/blob/main/CHANGELOG.md)
+            
+            ### 安装说明
+            
+            #### Windows
+            下载 `.exe` 安装包并运行
+            
+            #### macOS
+            下载 `.dmg` 文件并拖拽到 Applications
+            
+            #### Linux
+            下载 `.AppImage` 文件，添加执行权限后运行
+            
+            ---
+            
+            **完整文档**: https://github.com/dulingzhi/UI-Designer
+          releaseDraft: false
+          prerelease: false
+          args: --verbose

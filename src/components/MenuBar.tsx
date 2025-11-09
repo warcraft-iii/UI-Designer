@@ -717,7 +717,12 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       { separator: true },
       {
         label: '检查更新',
-        action: () => console.log('Check updates')
+        action: () => {
+          // 调用全局的 checkForUpdates 函数
+          if ((window as any).checkForUpdates) {
+            (window as any).checkForUpdates();
+          }
+        }
       },
       { separator: true },
       {

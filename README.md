@@ -42,6 +42,7 @@
 - **60+快捷键** - 类似VS Code的快捷键体验
 - **模板系统** - 内置常用UI组件模板
 - **阵列系统** - 快速创建技能栏、背包等
+- **自动更新** - 基于GitHub Release的自动更新功能
 
 ---
 
@@ -239,6 +240,7 @@ git push origin feature/amazing-feature
 - [用户指南](docs/USER_GUIDE.md) - 完整使用手册
 - [开发路线](docs/ROADMAP.md) - 未来规划
 - [FDF解析器](docs/FDF_PARSER_GUIDE.md) - FDF导入详解
+- [更新器配置](docs/UPDATER_GUIDE.md) - 发布和更新指南
 
 ---
 
@@ -264,6 +266,7 @@ git push origin feature/amazing-feature
 - ✅ 智能参考线和标尺
 - ✅ 样式预设系统
 - ✅ 60+快捷键支持
+- ✅ 基于GitHub Release的自动更新功能
 
 查看 [完整更新日志](docs/RELEASE_NOTES_v0.4.md)
 
