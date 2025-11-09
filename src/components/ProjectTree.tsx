@@ -8,6 +8,7 @@ import { CreateCircleArrayCommand } from '../commands/CircleArrayCommand';
 import { TableArrayDialog } from './TableArrayDialog';
 import { CircleArrayDialog } from './CircleArrayDialog';
 import { ConfirmDialog } from './ConfirmDialog';
+import { useAlert } from '../hooks/useAlert';
 import { FrameType } from '../types';
 import './ProjectTree.css';
 
@@ -19,6 +20,7 @@ interface ProjectTreeProps {
 export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteRequest }) => {
   const { project, selectedFrameId, selectFrame, setHighlightedFrames, clearHighlightedFrames } = useProjectStore();
   const { executeCommand } = useCommandStore();
+  const { showAlert, AlertComponent } = useAlert();
   
   // 管理展开/折叠状态
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(project.rootFrameIds));
@@ -213,7 +215,11 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
     
     // 检查是否锁定
     if (frame.locked) {
-      alert('该控件已锁定，无法删除。请先解锁。');
+      showAlert({
+        title: '无法删除',
+        message: '该控件已锁定，无法删除。请先解锁。',
+        type: 'warning'
+      });
       setContextMenu(null);
       return;
     }
@@ -334,19 +340,31 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
     
     // 检查是否锁定
     if (frame.locked) {
-      alert('该控件已锁定，无法移动。请先解锁。');
+      showAlert({
+        title: '无法移动',
+        message: '该控件已锁定，无法移动。请先解锁。',
+        type: 'warning'
+      });
       setMoveToDialog(null);
       return;
     }
         // 不能移动到自己
     if (frameId === newParentId) {
-      alert('不能将控件移动到自己！');
+      showAlert({
+        title: '无法移动',
+        message: '不能将控件移动到自己！',
+        type: 'warning'
+      });
       return;
     }
 
     // 不能移动到自己的后代节点
     if (newParentId && isDescendant(newParentId, frameId)) {
-      alert('不能将控件移动到它的子控件中！');
+      showAlert({
+        title: '无法移动',
+        message: '不能将控件移动到它的子控件中！',
+        type: 'warning'
+      });
       return;
     }
 
@@ -904,6 +922,9 @@ export const ProjectTree: React.FC<ProjectTreeProps> = ({ onClose, onDeleteReque
           onCancel={cancelDeleteFrame}
         />
       )}
+
+      {/* 警告/错误提示对话框 */}
+      {AlertComponent}
     </div>
   );
 };
