@@ -3,9 +3,11 @@ import { vec3, mat4, quat } from 'gl-matrix';
 import { join } from '@tauri-apps/api/path';
 import { exists, readFile } from '@tauri-apps/plugin-fs';
 import { mpqManager } from '../utils/mpqManager';
-import { decodeBLPToRGBA, blpImageDataToImageData, parseMDX as parseMDXRust } from '../utils/rustBridge';
-// @ts-ignore - war3-model 是 TypeScript 源码，没有类型定义
-import { parseMDX as parseMDXJS, ModelRenderer } from 'war3-model';
+import { decodeBLPToRGBA, blpImageDataToImageData } from '../utils/rustBridge';
+// 使用我们自己的 TypeScript ModelRenderer
+import { ModelRenderer } from '../renderer';
+// @ts-ignore - war3-model 只用于解析
+import { parseMDX as parseMDXJS } from 'war3-model';
 
 // 添加样式到 head
 if (typeof document !== 'undefined') {
