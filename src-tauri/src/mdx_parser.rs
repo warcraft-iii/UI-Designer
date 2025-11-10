@@ -550,42 +550,49 @@ impl MdxParser {
         let start_pos = self.cursor.position();
         
         while self.cursor.position() < start_pos + size as u64 {
-            // Material inclusive size (unused)
-            self.cursor.read_u32::<LittleEndian>()?;
+            // Material inclusive size
+            let material_size = self.cursor.read_u32::<LittleEndian>()?;
+            let material_start = self.cursor.position();
             
+            // Priority plane 和 Render mode 直接跟在 size 后面
             let priority_plane = self.cursor.read_u32::<LittleEndian>()?;
             let render_mode = self.cursor.read_u32::<LittleEndian>()?;
             
-            // Read LAYS chunk
-            let lays_keyword = self.read_keyword()?;
-            if &lays_keyword != b"LAYS" {
-                return Err(ParseError(format!("Expected LAYS, got {:?}", lays_keyword)));
-            }
-            
-            let layers_count = self.cursor.read_u32::<LittleEndian>()?;
             let mut layers = Vec::new();
             
-            for _ in 0..layers_count {
-                let layer_size = self.cursor.read_u32::<LittleEndian>()?;
-                let layer_start = self.cursor.position();
+            // 读取 LAYS chunk (如果存在)
+            if self.cursor.position() < material_start + material_size as u64 {
+                let lays_keyword = self.read_keyword()?;
                 
-                let filter_mode = self.cursor.read_u32::<LittleEndian>()?;
-                let shading = self.cursor.read_u32::<LittleEndian>()?;
-                let texture_id = self.cursor.read_i32::<LittleEndian>()?;
-                let _tvertex_anim_id = self.cursor.read_i32::<LittleEndian>()?;
-                let coord_id = self.cursor.read_u32::<LittleEndian>()?;
-                let alpha = self.cursor.read_f32::<LittleEndian>()?;
-                
-                layers.push(Layer {
-                    filter_mode,
-                    shading,
-                    texture_id,
-                    coord_id,
-                    alpha,
-                });
-                
-                // 璺冲埌涓嬩竴涓?layer
-                self.cursor.seek(SeekFrom::Start(layer_start + layer_size as u64))?;
+                if &lays_keyword == b"LAYS" {
+                    let layers_count = self.cursor.read_u32::<LittleEndian>()?;
+                    
+                    for _ in 0..layers_count {
+                        let layer_size = self.cursor.read_u32::<LittleEndian>()?;
+                        let layer_start = self.cursor.position();
+                        
+                        let filter_mode = self.cursor.read_u32::<LittleEndian>()?;
+                        let shading = self.cursor.read_u32::<LittleEndian>()?;
+                        let texture_id = self.cursor.read_i32::<LittleEndian>()?;
+                        let _tvertex_anim_id = self.cursor.read_i32::<LittleEndian>()?;
+                        let coord_id = self.cursor.read_u32::<LittleEndian>()?;
+                        let alpha = self.cursor.read_f32::<LittleEndian>()?;
+                        
+                        layers.push(Layer {
+                            filter_mode,
+                            shading,
+                            texture_id,
+                            coord_id,
+                            alpha,
+                        });
+                        
+                        // 跳到下一个 layer (跳过可能的动画数据)
+                        self.cursor.seek(SeekFrom::Start(layer_start + layer_size as u64))?;
+                    }
+                } else {
+                    // 不是 LAYS，可能是其他动画块，跳过
+                    self.cursor.seek(SeekFrom::Current(-4))?;
+                }
             }
             
             model.materials.push(Material {
@@ -593,6 +600,9 @@ impl MdxParser {
                 render_mode,
                 layers,
             });
+            
+            // 确保在 material 结束位置
+            self.cursor.seek(SeekFrom::Start(material_start + material_size as u64))?;
         }
 
         Ok(())
