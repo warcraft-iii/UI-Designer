@@ -174,31 +174,31 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
 
         if (cancelled) return;
 
-        // 测试 Rust 解析器
-        console.log('🧪 测试 Rust MDX 解析器...');
-        try {
-          const uint8Array = new Uint8Array(modelBuffer);
-          const rustModel = await parseMDXRust(uint8Array);
-          console.log('✅ Rust 解析器成功:', {
-            version: rustModel.version,
-            name: rustModel.info?.name,
-            geosets: rustModel.geosets?.length || 0,
-            textures: rustModel.textures?.length || 0,
-            sequences: rustModel.sequences?.length || 0,
-            materials: rustModel.materials?.length || 0,
-            bones: rustModel.bones?.length || 0
-          });
+        // // 测试 Rust 解析器
+        // console.log('🧪 测试 Rust MDX 解析器...');
+        // try {
+        //   const uint8Array = new Uint8Array(modelBuffer);
+        //   const rustModel = await parseMDXRust(uint8Array);
+        //   console.log('✅ Rust 解析器成功:', {
+        //     version: rustModel.version,
+        //     name: rustModel.info?.name,
+        //     geosets: rustModel.geosets?.length || 0,
+        //     textures: rustModel.textures?.length || 0,
+        //     sequences: rustModel.sequences?.length || 0,
+        //     materials: rustModel.materials?.length || 0,
+        //     bones: rustModel.bones?.length || 0
+        //   });
           
-          // 详细调试信息
-          console.log('🔍 Rust 解析详情:', {
-            'geosets数组': rustModel.geosets,
-            'textures数组': rustModel.textures,
-            'sequences数组长度': rustModel.sequences?.length,
-            'materials数组长度': rustModel.materials?.length
-          });
-        } catch (rustErr) {
-          console.error('❌ Rust 解析器错误:', rustErr);
-        }
+        //   // 详细调试信息
+        //   console.log('🔍 Rust 解析详情:', {
+        //     'geosets数组': rustModel.geosets,
+        //     'textures数组': rustModel.textures,
+        //     'sequences数组长度': rustModel.sequences?.length,
+        //     'materials数组长度': rustModel.materials?.length
+        //   });
+        // } catch (rustErr) {
+        //   console.error('❌ Rust 解析器错误:', rustErr);
+        // }
 
         // 使用 JavaScript 解析器渲染（保持兼容）
         const model = parseMDXJS(modelBuffer);

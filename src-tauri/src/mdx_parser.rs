@@ -329,7 +329,7 @@ impl MdxParser {
         let mut bytes = vec![0u8; length];
         self.cursor.read_exact(&mut bytes)?;
         
-        // 鎵惧埌绗竴涓?null 瀛楃
+        // 找到第一个 null 字符
         let end = bytes.iter().position(|&b| b == 0).unwrap_or(length);
         Ok(String::from_utf8_lossy(&bytes[..end]).to_string())
     }
@@ -356,7 +356,7 @@ impl MdxParser {
     }
 
     fn parse_internal(&mut self) -> Result<MdxModel, ParseError> {
-        // 璇诲彇鏂囦欢澶?
+        // 读取文件头
         let magic = self.read_keyword()?;
 
         if &magic != MDX_MAGIC {
@@ -396,17 +396,18 @@ impl MdxParser {
             nodes: Vec::new(),
         };
 
-        // 璇诲彇鎵€鏈?chunks
+        // 读取所有 chunks
         loop {
             let chunk_id = match self.read_keyword() {
                 Ok(id) => id,
-                Err(_) => break, // 鏂囦欢缁撴潫
+                Err(_) => break, // 文件结束
             };
 
             let chunk_type = ChunkType::from_bytes(&chunk_id);
+            
             let chunk_size = self.cursor.read_u32::<LittleEndian>()?;
 
-            // 鏍规嵁 chunk 绫诲瀷澶勭悊
+            // 根据 chunk 类型处理
             match chunk_type {
                 ChunkType::Vers => {
                     model.version = self.cursor.read_u32::<LittleEndian>()?;
@@ -466,6 +467,10 @@ impl MdxParser {
             }
         }
 
+        eprintln!("✅ MDX 解析完成: {} geosets, {} textures, {} materials, {} sequences, {} bones", 
+            model.geosets.len(), model.textures.len(), model.materials.len(), 
+            model.sequences.len(), model.bones.len());
+        
         Ok(model)
     }
 
@@ -529,27 +534,40 @@ impl MdxParser {
     }
 
     fn parse_textures(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
-        let start_pos = self.cursor.position();
-        eprintln!("[parse_textures] start_pos={}, size={}, end_pos={}", start_pos, size, start_pos + size as u64);
+        // 每个纹理固定 268 字节: replaceable_id (4) + path (256) + unknown (4) + flags (4)
+        const TEXTURE_SIZE: u64 = 268;
+        let texture_count = size as u64 / TEXTURE_SIZE;
         
-        let mut count = 0;
-        while self.cursor.position() < start_pos + size as u64 {
+        for _ in 0..texture_count {
             let replaceable_id = self.cursor.read_u32::<LittleEndian>()?;
-            let path = self.read_string(256)?;
-            let flags = self.cursor.read_u32::<LittleEndian>()?;
             
-            eprintln!("[parse_textures] #{}: path='{}', replaceable_id={}, flags={}", 
-                count, path, replaceable_id, flags);
+            // 读取 256 字节的路径字段
+            let mut path_bytes = vec![0u8; 256];
+            self.cursor.read_exact(&mut path_bytes)?;
+            
+            // 跳过前导 null 字节,找到实际字符串
+            let start_idx = path_bytes.iter().position(|&b| b != 0).unwrap_or(256);
+            let end_idx = if start_idx < 256 {
+                path_bytes[start_idx..].iter().position(|&b| b == 0)
+                    .map(|pos| start_idx + pos)
+                    .unwrap_or(256)
+            } else {
+                256
+            };
+            
+            let path = String::from_utf8_lossy(&path_bytes[start_idx..end_idx]).to_string();
+            
+            // 跳过 unknown 4 字节
+            let _unknown = self.cursor.read_u32::<LittleEndian>()?;
+            let flags = self.cursor.read_u32::<LittleEndian>()?;
             
             model.textures.push(Texture {
                 replaceable_id,
                 path,
                 flags,
             });
-            count += 1;
         }
         
-        eprintln!("[parse_textures] Parsed {} textures", count);
         Ok(())
     }
 
@@ -557,7 +575,8 @@ impl MdxParser {
         let start_pos = self.cursor.position();
         
         while self.cursor.position() < start_pos + size as u64 {
-            // Material inclusive size
+            // Material inclusive size (包括 size 字段本身的 4 字节)
+            let size_field_pos = self.cursor.position();
             let material_size = self.cursor.read_u32::<LittleEndian>()?;
             let material_start = self.cursor.position();
             
@@ -608,8 +627,9 @@ impl MdxParser {
                 layers,
             });
             
-            // 确保在 material 结束位置
-            self.cursor.seek(SeekFrom::Start(material_start + material_size as u64))?;
+            // material_size 是 inclusive (包括 size 字段的 4 字节)
+            // 所以需要从 size_field_pos (size 字段的位置) + material_size
+            self.cursor.seek(SeekFrom::Start(size_field_pos + material_size as u64))?;
         }
 
         Ok(())
@@ -617,14 +637,13 @@ impl MdxParser {
 
     fn parse_geosets(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
-        eprintln!("[parse_geosets] start_pos={}, size={}, end_pos={}", start_pos, size, start_pos + size as u64);
 
         let mut geoset_count = 0;
         while self.cursor.position() < start_pos + size as u64 {
+            // Geoset size 是 inclusive (包括 size 字段本身的 4 字节)
+            let size_field_pos = self.cursor.position();
             let geoset_size = self.cursor.read_u32::<LittleEndian>()?;
             let geoset_start = self.cursor.position();
-            
-            eprintln!("[parse_geosets] Geoset #{}: size={}, start={}", geoset_count, geoset_size, geoset_start);
             
             let mut geoset = Geoset {
                 vertices: Vec::new(),
@@ -737,18 +756,13 @@ impl MdxParser {
                 geoset.bounds = BoundingBox { min, max };
             }
 
-            eprintln!("[parse_geosets] Geoset #{}: vertices={}, normals={}, faces={}, uvs_sets={}", 
-                geoset_count, geoset.vertices.len(), geoset.normals.len(), 
-                geoset.faces.len(), geoset.uvs.len());
-
             model.geosets.push(geoset);
             geoset_count += 1;
             
-            // 确保指针在 geoset 结尾
-            self.cursor.seek(SeekFrom::Start(geoset_start + geoset_size as u64))?;
+            // geoset_size 是 inclusive，从 size_field_pos 开始计算
+            self.cursor.seek(SeekFrom::Start(size_field_pos + geoset_size as u64))?;
         }
 
-        eprintln!("[parse_geosets] Parsed {} geosets", geoset_count);
         Ok(())
     }
 
@@ -779,8 +793,8 @@ impl MdxParser {
     }
 
     fn parse_node(&mut self, model: &mut MdxModel) -> Result<Node, ParseError> {
+        let node_start_pos = self.cursor.position();
         let size = self.cursor.read_u32::<LittleEndian>()?;
-        let start_pos = self.cursor.position();
         
         let name = self.read_string(80)?;
         
@@ -802,8 +816,7 @@ impl MdxParser {
             geoset_anim_id: None,
         };
         
-        // 璺宠繃鍔ㄧ敾鏁版嵁 (KGTR, KGRT, KGSC 绛?
-        self.cursor.seek(SeekFrom::Start(start_pos + size as u64))?;
+        self.cursor.seek(SeekFrom::Start(node_start_pos + size as u64))?;
         
         // 纭繚 nodes 鏁扮粍瓒冲澶?
         if let Some(id) = object_id {
@@ -818,10 +831,13 @@ impl MdxParser {
 
     fn parse_bones(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
-
+        
+        let mut bone_count = 0;
         while self.cursor.position() < start_pos + size as u64 {
+            // 每个 bone 包括: node + geoset_id (4) + geoset_anim_id (4)
             let mut bone = self.parse_node(model)?;
             
+            // 然后读取 bone 特有的字段
             let geoset_id = self.cursor.read_i32::<LittleEndian>()?;
             bone.geoset_id = if geoset_id == NONE { None } else { Some(geoset_id) };
             
@@ -829,8 +845,10 @@ impl MdxParser {
             bone.geoset_anim_id = if geoset_anim_id == NONE { None } else { Some(geoset_anim_id) };
             
             model.bones.push(bone);
+            bone_count += 1;
         }
-
+        
+        eprintln!("[parse_bones] Parsed {} bones", bone_count);
         Ok(())
     }
 
