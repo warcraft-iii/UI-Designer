@@ -3,9 +3,9 @@ import { vec3, mat4, quat } from 'gl-matrix';
 import { join } from '@tauri-apps/api/path';
 import { exists, readFile } from '@tauri-apps/plugin-fs';
 import { mpqManager } from '../utils/mpqManager';
-import { decodeBLPToRGBA, blpImageDataToImageData } from '../utils/rustBridge';
+import { decodeBLPToRGBA, blpImageDataToImageData, parseMDX as parseMDXRust } from '../utils/rustBridge';
 // @ts-ignore - war3-model 是 TypeScript 源码，没有类型定义
-import { parseMDX, ModelRenderer } from 'war3-model';
+import { parseMDX as parseMDXJS, ModelRenderer } from 'war3-model';
 
 // 添加样式到 head
 if (typeof document !== 'undefined') {
@@ -174,8 +174,26 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
 
         if (cancelled) return;
 
-        // 解析 MDX
-        const model = parseMDX(modelBuffer);
+        // 测试 Rust 解析器
+        console.log('🧪 测试 Rust MDX 解析器...');
+        try {
+          const uint8Array = new Uint8Array(modelBuffer);
+          const rustModel = await parseMDXRust(uint8Array);
+          console.log('✅ Rust 解析器成功:', {
+            version: rustModel.version,
+            name: rustModel.info?.name,
+            geosets: rustModel.geosets?.length || 0,
+            textures: rustModel.textures?.length || 0,
+            sequences: rustModel.sequences?.length || 0,
+            materials: rustModel.materials?.length || 0,
+            bones: rustModel.bones?.length || 0
+          });
+        } catch (rustErr) {
+          console.error('❌ Rust 解析器错误:', rustErr);
+        }
+
+        // 使用 JavaScript 解析器渲染（保持兼容）
+        const model = parseMDXJS(modelBuffer);
         console.log('📦 MDX 模型已解析:', {
           version: model.Version,
           name: model.Info?.Name,

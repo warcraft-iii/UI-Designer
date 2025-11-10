@@ -61,16 +61,111 @@ export interface MdxBoundingBox {
 }
 
 /**
- * MDX 模型数据
+ * MDX 模型信息
+ */
+export interface MdxModelInfo {
+  name: string;
+  minimum_extent?: MdxVertex;
+  maximum_extent?: MdxVertex;
+  bounds_radius: number;
+  blend_time: number;
+}
+
+/**
+ * MDX 序列（动画）
+ */
+export interface MdxSequence {
+  name: string;
+  interval: [number, number];
+  move_speed: number;
+  non_looping: boolean;
+  rarity: number;
+  minimum_extent?: MdxVertex;
+  maximum_extent?: MdxVertex;
+  bounds_radius: number;
+}
+
+/**
+ * MDX 纹理
+ */
+export interface MdxTexture {
+  replaceable_id: number;
+  path: string;
+  flags: number;
+}
+
+/**
+ * MDX 材质层
+ */
+export interface MdxLayer {
+  filter_mode: number;
+  shading: number;
+  texture_id: number;
+  coord_id: number;
+  alpha: number;
+}
+
+/**
+ * MDX 材质
+ */
+export interface MdxMaterial {
+  priority_plane: number;
+  render_mode: number;
+  layers: MdxLayer[];
+}
+
+/**
+ * MDX 几何体
+ */
+export interface MdxGeoset {
+  vertices: MdxVertex[];
+  normals: MdxVertex[];
+  uvs: MdxUV[][];
+  faces: MdxFace[];
+  vertex_groups: number[];
+  material_id: number;
+  selection_group: number;
+  bounds: MdxBoundingBox;
+}
+
+/**
+ * MDX 节点
+ */
+export interface MdxNode {
+  name: string;
+  object_id?: number;
+  parent?: number;
+  pivot_point?: MdxVertex;
+  flags: number;
+  geoset_id?: number;
+  geoset_anim_id?: number;
+}
+
+/**
+ * MDX 模型数据（完整版本）
  */
 export interface MdxModel {
   version: number;
-  name: string;
-  vertices: MdxVertex[];
-  normals: MdxNormal[];
-  uvs: MdxUV[];
-  faces: MdxFace[];
-  bounds: MdxBoundingBox;
+  info: MdxModelInfo;
+  sequences: MdxSequence[];
+  global_sequences: number[];
+  textures: MdxTexture[];
+  materials: MdxMaterial[];
+  geosets: MdxGeoset[];
+  geoset_anims: any[];
+  bones: MdxNode[];
+  helpers: MdxNode[];
+  attachments: any[];
+  pivot_points: MdxVertex[];
+  event_objects: any[];
+  collision_shapes: any[];
+  cameras: any[];
+  lights: any[];
+  particle_emitters: any[];
+  particle_emitters2: any[];
+  ribbon_emitters: any[];
+  texture_anims: any[];
+  nodes: (MdxNode | null)[];
 }
 
 /**

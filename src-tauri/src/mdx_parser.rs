@@ -1,17 +1,40 @@
-// MDX/MDL 模型文件解析器
-// 参考格式: Warcraft III MDX binary format specification
-// 参考实现: war3-model JavaScript 库
+﻿// MDX/MDL 妯″瀷鏂囦欢瑙ｆ瀽鍣?
+// 鍙傝€冩牸寮? Warcraft III MDX binary format specification
+// 鍙傝€冨疄鐜? war3-model JavaScript 搴?
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Deserialize, Serialize};
 use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::fmt;
 
-// MDX 文件头结构 (4 bytes magic + version)
+// MDX 鏂囦欢澶寸粨鏋?(4 bytes magic + version)
 const MDX_MAGIC: &[u8; 4] = b"MDLX";
-const BIG_ENDIAN: bool = false; // MDX 使用小端序
-const NONE: i32 = -1; // 用于表示 null 的特殊值
+const BIG_ENDIAN: bool = false; // MDX 浣跨敤灏忕搴?
+const NONE: i32 = -1; // 鐢ㄤ簬琛ㄧず null 鐨勭壒娈婂€?
 
-// 完整的 MDX 模型结构
+// 鑷畾涔夐敊璇被鍨嬶紝鍙互鑷姩浠?io::Error 杞崲
+#[derive(Debug)]
+struct ParseError(String);
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<std::io::Error> for ParseError {
+    fn from(err: std::io::Error) -> Self {
+        ParseError(format!("IO Error: {}", err))
+    }
+}
+
+impl From<ParseError> for String {
+    fn from(err: ParseError) -> Self {
+        err.0
+    }
+}
+
+// 瀹屾暣鐨?MDX 妯″瀷缁撴瀯
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MdxModel {
     pub version: u32,
@@ -85,7 +108,7 @@ pub struct Layer {
 pub struct Geoset {
     pub vertices: Vec<Vec3>,
     pub normals: Vec<Vec3>,
-    pub uvs: Vec<Vec<Vec2>>, // 可能有多个 UV 集
+    pub uvs: Vec<Vec<Vec2>>, // 鍙兘鏈夊涓?UV 闆?
     pub faces: Vec<Face>,
     pub vertex_groups: Vec<u8>,
     pub material_id: u32,
@@ -197,7 +220,7 @@ pub struct RibbonEmitter {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TextureAnim {
-    // 纹理动画数据
+    // 绾圭悊鍔ㄧ敾鏁版嵁
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
@@ -213,14 +236,14 @@ pub struct Vec2 {
     pub v: f32,
 }
 
-// 向下兼容旧的名称
+// 鍚戜笅鍏煎鏃х殑鍚嶇О
 pub type Vertex = Vec3;
 pub type Normal = Vec3;
 pub type UV = Vec2;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Face {
-    pub indices: [u16; 3], // 三角面的三个顶点索引
+    pub indices: [u16; 3], // 涓夎闈㈢殑涓変釜椤剁偣绱㈠紩
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
@@ -229,7 +252,7 @@ pub struct BoundingBox {
     pub max: Vec3,
 }
 
-// Chunk 类型标识符 (4 bytes)
+// Chunk 绫诲瀷鏍囪瘑绗?(4 bytes)
 #[derive(Debug, PartialEq)]
 enum ChunkType {
     Vers, // Version
@@ -294,53 +317,53 @@ impl MdxParser {
         })
     }
 
-    // 辅助方法：读取关键字（4字节字符串）
-    fn read_keyword(&mut self) -> Result<[u8; 4], String> {
+    // 杈呭姪鏂规硶锛氳鍙栧叧閿瓧锛?瀛楄妭瀛楃涓诧級
+    fn read_keyword(&mut self) -> Result<[u8; 4], ParseError> {
         let mut keyword = [0u8; 4];
-        self.cursor
-            .read_exact(&mut keyword)
-            .map_err(|e| format!("Failed to read keyword: {}", e))?;
+        self.cursor.read_exact(&mut keyword)?;
         Ok(keyword)
     }
 
-    // 辅助方法：读取固定长度字符串
-    fn read_string(&mut self, length: usize) -> Result<String, String> {
+    // 杈呭姪鏂规硶锛氳鍙栧浐瀹氶暱搴﹀瓧绗︿覆
+    fn read_string(&mut self, length: usize) -> Result<String, ParseError> {
         let mut bytes = vec![0u8; length];
-        self.cursor
-            .read_exact(&mut bytes)
-            .map_err(|e| format!("Failed to read string: {}", e))?;
+        self.cursor.read_exact(&mut bytes)?;
         
-        // 找到第一个 null 字符
+        // 鎵惧埌绗竴涓?null 瀛楃
         let end = bytes.iter().position(|&b| b == 0).unwrap_or(length);
         Ok(String::from_utf8_lossy(&bytes[..end]).to_string())
     }
 
-    // 辅助方法：读取 Vec3
-    fn read_vec3(&mut self) -> Result<Vec3, String> {
+    // 杈呭姪鏂规硶锛氳鍙?Vec3
+    fn read_vec3(&mut self) -> Result<Vec3, ParseError> {
         Ok(Vec3 {
-            x: self.cursor.read_f32::<LittleEndian>().map_err(|e| e.to_string())?,
-            y: self.cursor.read_f32::<LittleEndian>().map_err(|e| e.to_string())?,
-            z: self.cursor.read_f32::<LittleEndian>().map_err(|e| e.to_string())?,
+            x: self.cursor.read_f32::<LittleEndian>()?,
+            y: self.cursor.read_f32::<LittleEndian>()?,
+            z: self.cursor.read_f32::<LittleEndian>()?,
         })
     }
 
-    // 辅助方法：读取边界范围
-    fn read_extent(&mut self) -> Result<(f32, Option<Vec3>, Option<Vec3>), String> {
-        let bounds_radius = self.cursor.read_f32::<LittleEndian>().map_err(|e| e.to_string())?;
+    // 杈呭姪鏂规硶锛氳鍙栬竟鐣岃寖鍥?
+    fn read_extent(&mut self) -> Result<(f32, Option<Vec3>, Option<Vec3>), ParseError> {
+        let bounds_radius = self.cursor.read_f32::<LittleEndian>()?;
         let minimum_extent = Some(self.read_vec3()?);
         let maximum_extent = Some(self.read_vec3()?);
         Ok((bounds_radius, minimum_extent, maximum_extent))
     }
 
     pub fn parse(&mut self) -> Result<MdxModel, String> {
-        // 读取文件头
+        self.parse_internal().map_err(|e| e.into())
+    }
+
+    fn parse_internal(&mut self) -> Result<MdxModel, ParseError> {
+        // 璇诲彇鏂囦欢澶?
         let magic = self.read_keyword()?;
 
         if &magic != MDX_MAGIC {
-            return Err(format!(
+            return Err(ParseError(format!(
                 "Invalid MDX magic: expected {:?}, got {:?}",
                 MDX_MAGIC, magic
-            ));
+            )));
         }
 
         let mut model = MdxModel {
@@ -373,24 +396,20 @@ impl MdxParser {
             nodes: Vec::new(),
         };
 
-        // 读取所有 chunks
+        // 璇诲彇鎵€鏈?chunks
         loop {
             let chunk_id = match self.read_keyword() {
                 Ok(id) => id,
-                Err(_) => break, // 文件结束
+                Err(_) => break, // 鏂囦欢缁撴潫
             };
 
             let chunk_type = ChunkType::from_bytes(&chunk_id);
-            let chunk_size = self
-                .cursor
-                .read_u32::<LittleEndian>()
-                .map_err(|e| format!("Failed to read chunk size: {}", e))?;
+            let chunk_size = self.cursor.read_u32::<LittleEndian>()?;
 
-            // 根据 chunk 类型处理
+            // 鏍规嵁 chunk 绫诲瀷澶勭悊
             match chunk_type {
                 ChunkType::Vers => {
-                    model.version = self.cursor.read_u32::<LittleEndian>()
-                        .map_err(|e| format!("Failed to read version: {}", e))?;
+                    model.version = self.cursor.read_u32::<LittleEndian>()?;
                 }
                 ChunkType::Modl => {
                     self.parse_model_info(&mut model)?;
@@ -432,15 +451,13 @@ impl MdxParser {
                     self.parse_collision_shapes(&mut model, chunk_size)?;
                 }
                 _ => {
-                    // 跳过未知或暂不处理的 chunk
-                    self.cursor
-                        .seek(SeekFrom::Current(chunk_size as i64))
-                        .map_err(|e| format!("Failed to skip chunk: {}", e))?;
+                    // 璺宠繃鏈煡鎴栨殏涓嶅鐞嗙殑 chunk
+                    self.cursor.seek(SeekFrom::Current(chunk_size as i64))?;
                 }
             }
         }
 
-        // 应用 pivot points 到 nodes
+        // 搴旂敤 pivot points 鍒?nodes
         for (i, pivot) in model.pivot_points.iter().enumerate() {
             if i < model.nodes.len() {
                 if let Some(ref mut node) = model.nodes[i] {
@@ -452,27 +469,26 @@ impl MdxParser {
         Ok(model)
     }
 
-    fn parse_model_info(&mut self, model: &mut MdxModel) -> Result<(), String> {
-        // 模型名称 (336 bytes in MDX, 80 in older versions)
+    fn parse_model_info(&mut self, model: &mut MdxModel) -> Result<(), ParseError> {
+        // 妯″瀷鍚嶇О (336 bytes in MDX, 80 in older versions)
         model.info.name = self.read_string(336)?;
         
-        // 跳过 animation file name (4 bytes, unused)
+        // 璺宠繃 animation file name (4 bytes, unused)
         self.cursor.read_u32::<LittleEndian>().ok();
         
-        // 读取边界
+        // 璇诲彇杈圭晫
         let (radius, min_extent, max_extent) = self.read_extent()?;
         model.info.bounds_radius = radius;
         model.info.minimum_extent = min_extent;
         model.info.maximum_extent = max_extent;
         
         // Blend time
-        model.info.blend_time = self.cursor.read_u32::<LittleEndian>()
-            .map_err(|e| format!("Failed to read blend time: {}", e))?;
+        model.info.blend_time = self.cursor.read_u32::<LittleEndian>()?;
 
         Ok(())
     }
 
-    fn parse_sequences(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_sequences(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
         
         while self.cursor.position() < start_pos + size as u64 {
@@ -504,7 +520,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_global_sequences(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_global_sequences(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let count = size / 4;
         for _ in 0..count {
             model.global_sequences.push(self.cursor.read_u32::<LittleEndian>()?);
@@ -512,7 +528,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_textures(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_textures(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
         
         while self.cursor.position() < start_pos + size as u64 {
@@ -530,7 +546,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_materials(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_materials(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
         
         while self.cursor.position() < start_pos + size as u64 {
@@ -543,7 +559,7 @@ impl MdxParser {
             // Read LAYS chunk
             let lays_keyword = self.read_keyword()?;
             if &lays_keyword != b"LAYS" {
-                return Err(format!("Expected LAYS, got {:?}", lays_keyword));
+                return Err(ParseError(format!("Expected LAYS, got {:?}", lays_keyword)));
             }
             
             let layers_count = self.cursor.read_u32::<LittleEndian>()?;
@@ -568,7 +584,7 @@ impl MdxParser {
                     alpha,
                 });
                 
-                // 跳到下一个 layer
+                // 璺冲埌涓嬩竴涓?layer
                 self.cursor.seek(SeekFrom::Start(layer_start + layer_size as u64))?;
             }
             
@@ -582,7 +598,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_geosets(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_geosets(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -603,7 +619,7 @@ impl MdxParser {
                 },
             };
 
-            // 读取 geoset 内的 sub-chunks
+            // 璇诲彇 geoset 鍐呯殑 sub-chunks
             while self.cursor.position() < geoset_start + geoset_size as u64 {
                 let chunk_id = self.read_keyword()?;
 
@@ -650,7 +666,7 @@ impl MdxParser {
                         }
                     }
                     b"MTGC" | b"MATS" | b"TANG" | b"SKIN" | b"UVAS" => {
-                        // 其他数据块，跳过
+                        // 鍏朵粬鏁版嵁鍧楋紝璺宠繃
                         let count = self.cursor.read_u32::<LittleEndian>()?;
                         let bytes_per_item = match &chunk_id {
                             b"MTGC" => 4,
@@ -658,7 +674,7 @@ impl MdxParser {
                             b"TANG" => 16, // 4 floats
                             b"SKIN" => 8,  // 8 bytes per skin weight
                             b"UVAS" => {
-                                // UV 集合
+                                // UV 闆嗗悎
                                 let num_uvs = count;
                                 let mut uv_set = Vec::new();
                                 for _ in 0..num_uvs {
@@ -676,13 +692,13 @@ impl MdxParser {
                         }
                     }
                     _ => {
-                        // 未知 chunk，跳到 geoset 结尾
+                        // 鏈煡 chunk锛岃烦鍒?geoset 缁撳熬
                         break;
                     }
                 }
             }
 
-            // 计算边界
+            // 璁＄畻杈圭晫
             if !geoset.vertices.is_empty() {
                 let mut min = geoset.vertices[0];
                 let mut max = geoset.vertices[0];
@@ -702,14 +718,14 @@ impl MdxParser {
 
             model.geosets.push(geoset);
             
-            // 确保指针在 geoset 结尾
+            // 纭繚鎸囬拡鍦?geoset 缁撳熬
             self.cursor.seek(SeekFrom::Start(geoset_start + geoset_size as u64))?;
         }
 
         Ok(())
     }
 
-    fn parse_geoset_anims(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_geoset_anims(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -735,7 +751,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_node(&mut self, model: &mut MdxModel) -> Result<Node, String> {
+    fn parse_node(&mut self, model: &mut MdxModel) -> Result<Node, ParseError> {
         let size = self.cursor.read_u32::<LittleEndian>()?;
         let start_pos = self.cursor.position();
         
@@ -759,10 +775,10 @@ impl MdxParser {
             geoset_anim_id: None,
         };
         
-        // 跳过动画数据 (KGTR, KGRT, KGSC 等)
+        // 璺宠繃鍔ㄧ敾鏁版嵁 (KGTR, KGRT, KGSC 绛?
         self.cursor.seek(SeekFrom::Start(start_pos + size as u64))?;
         
-        // 确保 nodes 数组足够大
+        // 纭繚 nodes 鏁扮粍瓒冲澶?
         if let Some(id) = object_id {
             while model.nodes.len() <= id as usize {
                 model.nodes.push(None);
@@ -773,7 +789,7 @@ impl MdxParser {
         Ok(node)
     }
 
-    fn parse_bones(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_bones(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -791,7 +807,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_helpers(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_helpers(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -802,7 +818,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_attachments(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_attachments(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -826,7 +842,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_pivot_points(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_pivot_points(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let count = size / (4 * 3); // Each pivot is 3 floats
         
         for _ in 0..count {
@@ -836,7 +852,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_event_objects(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_event_objects(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -845,7 +861,7 @@ impl MdxParser {
             // Read KEVT chunk
             let kevt_keyword = self.read_keyword()?;
             if &kevt_keyword != b"KEVT" {
-                return Err(format!("Expected KEVT, got {:?}", kevt_keyword));
+                return Err(ParseError(format!("Expected KEVT, got {:?}", kevt_keyword)));
             }
             
             let event_track_count = self.cursor.read_u32::<LittleEndian>()?;
@@ -865,7 +881,7 @@ impl MdxParser {
         Ok(())
     }
 
-    fn parse_collision_shapes(&mut self, model: &mut MdxModel, size: u32) -> Result<(), String> {
+    fn parse_collision_shapes(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
 
         while self.cursor.position() < start_pos + size as u64 {
@@ -913,3 +929,4 @@ mod tests {
         assert_eq!(MDX_MAGIC, b"MDLX");
     }
 }
+
