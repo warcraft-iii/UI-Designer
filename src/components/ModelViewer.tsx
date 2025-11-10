@@ -211,6 +211,14 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
           textures: model.Textures?.length || 0,
           sequences: model.Sequences?.length || 0
         });
+        
+        // 详细纹理信息
+        console.log('🔍 纹理详情:', model.Textures?.map((t, i) => ({
+          index: i,
+          path: t.Image,
+          replaceableId: t.ReplaceableId,
+          flags: t.Flags
+        })));
 
         // 创建 ModelRenderer
         const modelRenderer = new ModelRenderer(model);
@@ -243,21 +251,101 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
         
         if (model.Textures && model.Textures.length > 0) {
           // 异步加载所有纹理
-          const texturePromises = model.Textures.map(async (texture) => {
-            if (!texture.Image || texture.ReplaceableId) {
-              // 跳过可替换纹理（如团队颜色）
+          const texturePromises = model.Textures.map(async (texture, index) => {
+            console.log(`🔍 纹理 ${index}:`, {
+              Image: texture.Image,
+              ReplaceableId: texture.ReplaceableId,
+              willLoad: !!(texture.Image || texture.ReplaceableId)
+            });
+            
+            // 处理可替换纹理(队伍颜色等)
+            if (texture.ReplaceableId) {
+              // 尝试从 MPQ 加载真实的 TeamColor 纹理
+              const replaceableMap: Record<number, string> = {
+                1: 'ReplaceableTextures/TeamColor/TeamColor00.blp',  // 红色队伍
+                2: 'ReplaceableTextures/TeamGlow/TeamGlow00.blp'     // 队伍光辉
+              };
+              
+              const replaceablePath = replaceableMap[texture.ReplaceableId];
+              const texKey = `Replaceable${texture.ReplaceableId}`;
+              
+              if (replaceablePath) {
+                // 尝试从 MPQ 加载
+                mpqManager.readFile(replaceablePath).then(async (blpBuffer) => {
+                  if (blpBuffer) {
+                    console.log(`📥 加载替换纹理: ${replaceablePath}, ${blpBuffer.byteLength} 字节`);
+                    const blpImageData = await decodeBLPToRGBA(new Uint8Array(blpBuffer));
+                    
+                    if (blpImageData) {
+                      const imageData = blpImageDataToImageData(blpImageData);
+                      const canvas = document.createElement('canvas');
+                      canvas.width = imageData.width;
+                      canvas.height = imageData.height;
+                      const ctx = canvas.getContext('2d');
+                      
+                      if (ctx) {
+                        ctx.putImageData(imageData, 0, 0);
+                        const img = new Image();
+                        img.onload = () => {
+                          modelRenderer.setTextureImage(texKey, img);
+                          console.log(`✅ 替换纹理已设置: ${texKey} (${replaceablePath})`);
+                        };
+                        img.src = canvas.toDataURL();
+                      }
+                    }
+                  } else {
+                    // 找不到文件,使用纯色占位符
+                    createSolidColorTexture(texture.ReplaceableId, texKey);
+                  }
+                }).catch(() => {
+                  createSolidColorTexture(texture.ReplaceableId, texKey);
+                });
+              } else {
+                createSolidColorTexture(texture.ReplaceableId, texKey);
+              }
+              
+              // 创建纯色占位符函数
+              function createSolidColorTexture(replaceableId: number | undefined, key: string) {
+                if (!replaceableId) return;
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                
+                if (ctx) {
+                  const color = replaceableId === 1 ? '#FF0000' : '#FF8800';
+                  ctx.fillStyle = color;
+                  ctx.fillRect(0, 0, 64, 64);
+                  
+                  const img = new Image();
+                  img.onload = () => {
+                    modelRenderer.setTextureImage(key, img);
+                    console.log(`✅ 替换纹理占位符: ${key} (纯色 ${color})`);
+                  };
+                  img.src = canvas.toDataURL();
+                }
+              }
+              
+              return;
+            }
+            
+            if (!texture.Image) {
               return;
             }
 
             try {
               // 从 MPQ 加载 BLP 文件
               const texturePath = texture.Image.replace(/\\/g, '/');
+              console.log(`📥 开始加载: ${texturePath}`);
               const blpBuffer = await mpqManager.readFile(texturePath);
               
               if (!blpBuffer) {
                 console.warn(`⚠️ 找不到纹理: ${texturePath}`);
                 return;
               }
+
+              console.log(`✅ BLP 已读取: ${texturePath}, ${blpBuffer.byteLength} 字节`);
 
               // 使用 Rust 解码 BLP 为 RGBA 数据
               const blpImageData = await decodeBLPToRGBA(new Uint8Array(blpBuffer));
@@ -266,6 +354,8 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
                 console.warn(`⚠️ BLP 解码失败: ${texturePath}`);
                 return;
               }
+
+              console.log(`✅ BLP 已解码: ${texturePath}, ${blpImageData.width}x${blpImageData.height}`);
 
               // 转换为 ImageData
               const imageData = blpImageDataToImageData(blpImageData);
@@ -282,7 +372,10 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
                 const img = new Image();
                 img.onload = () => {
                   modelRenderer.setTextureImage(texture.Image, img);
-                  console.log(`✅ 纹理已设置: ${texture.Image}`);
+                  console.log(`✅ 纹理已设置到 WebGL: ${texture.Image}`);
+                };
+                img.onerror = (err) => {
+                  console.error(`❌ Image.onload 失败: ${texture.Image}`, err);
                 };
                 img.src = canvas.toDataURL();
               }
@@ -291,12 +384,12 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
             }
           });
 
-          // 等待所有纹理加载完成（不阻塞渲染）
+          // 等待所有纹理加载完成(不阻塞渲染)
           Promise.all(texturePromises).then(() => {
-            console.log('🖼️ 所有纹理处理完成');
+            console.log('🖼️ 所有纹理 Promise 完成');
+          }).catch((err) => {
+            console.error('❌ 纹理加载错误:', err);
           });
-        } else {
-          console.log('ℹ️ 模型没有纹理');
         }
 
         // 设置相机和矩阵

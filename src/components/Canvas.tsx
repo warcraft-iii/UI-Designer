@@ -292,8 +292,8 @@ export const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setContainerSize({ 
-          width: width - (showRulers ? 30 : 0), 
-          height: height - (showRulers ? 30 : 0) 
+          width: width, 
+          height: height 
         });
       }
     });

@@ -257,6 +257,7 @@ export class ModelRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
     this.textures.set(path, texture);
+    console.log(`📌 纹理已存储到 Map: key="${path}", size=${image.width}x${image.height}, 总数=${this.textures.size}`);
   }
 
   private isPowerOf2(value: number): boolean {
@@ -356,8 +357,31 @@ export class ModelRenderer {
     // 线框模式
     gl.uniform1i(program.uniformLocations.wireframe, options.wireframe ? 1 : 0);
 
-    // 渲染每个 Geoset
+    // 先渲染不透明的 Geoset(FilterMode 0),再渲染透明的
+    const opaqueGeosets: number[] = [];
+    const transparentGeosets: number[] = [];
+    
     for (let i = 0; i < this.model.Geosets.length; i++) {
+      const geoset = this.model.Geosets[i];
+      const material = this.model.Materials[geoset.MaterialID];
+      
+      if (material && material.Layers && material.Layers.length > 0) {
+        const filterMode = material.Layers[0].FilterMode ?? 1;
+        if (filterMode === 0) {
+          opaqueGeosets.push(i);
+        } else {
+          transparentGeosets.push(i);
+        }
+      }
+    }
+
+    // 渲染不透明的
+    for (const i of opaqueGeosets) {
+      this.renderGeoset(i, program, options.wireframe || false);
+    }
+    
+    // 渲染透明的
+    for (const i of transparentGeosets) {
       this.renderGeoset(i, program, options.wireframe || false);
     }
   }
@@ -365,7 +389,7 @@ export class ModelRenderer {
   /**
    * 渲染单个 Geoset
    */
-  private renderGeoset(index: number, program: ShaderProgram, wireframe: boolean): void {
+  private renderGeoset(index: number, program: ShaderProgram, _wireframe: boolean): void {
     const gl = this.gl;
     const geoset = this.model.Geosets[index];
     const material = this.model.Materials[geoset.MaterialID];
@@ -375,6 +399,11 @@ export class ModelRenderer {
     }
 
     const layer = material.Layers[0]; // 简化：只渲染第一层
+    
+    // 获取纹理 ID（可能是数字或动画对象）
+    const textureID = typeof layer.TextureID === 'number' ? layer.TextureID : 
+                      (layer.TextureID as any)?.Value ?? 0;
+    
     const texture = this.getTextureForLayer(layer);
 
     // 绑定纹理
@@ -383,21 +412,54 @@ export class ModelRenderer {
     gl.uniform1i(program.uniformLocations.sampler, 0);
 
     // 设置可替换纹理类型
-    const textureObj = layer.TextureID >= 0 && layer.TextureID < this.model.Textures.length 
-      ? this.model.Textures[layer.TextureID] 
+    const textureObj = textureID >= 0 && textureID < this.model.Textures.length 
+      ? this.model.Textures[textureID] 
       : null;
-    const replaceableType = textureObj?.ReplaceableId ?? 0;
-    gl.uniform1i(program.uniformLocations.replaceableType, replaceableType);
-
-    // 调试输出
-    if (index === 0) {
-      console.log('Geoset 0:', {
-        textureID: layer.TextureID,
-        replaceableType,
-        texturePath: textureObj?.Image,
-        filterMode: layer.FilterMode
+    
+    const replaceableId = textureObj?.ReplaceableId ?? 0;
+    
+    // 判断是否使用了可替换纹理
+    // 只有当没有真实纹理图片,且使用了替换纹理时,才设置 replaceableType
+    let replaceableType = 0;
+    if (replaceableId !== 0) {
+      const hasRealTexture = textureObj?.Image && this.textures.has(textureObj.Image);
+      
+      if (!hasRealTexture) {
+        // 没有真实纹理,检查是否使用了替换纹理
+        const replaceableKey = `Replaceable${replaceableId}`;
+        if (this.textures.has(replaceableKey)) {
+          replaceableType = replaceableId;
+        }
+      }
+      // 如果有真实纹理,replaceableType 保持 0(使用纹理而非颜色)
+    }
+    
+    // 调试纹理绑定
+    if (index <= 2) { // 记录前3个 geoset
+      const replaceableKey = textureObj?.ReplaceableId 
+        ? `Replaceable${textureObj.ReplaceableId}` 
+        : null;
+      
+      const actualTexturePath = textureObj?.Image;
+      const hasActualTexture = actualTexturePath ? this.textures.has(actualTexturePath) : false;
+      
+      console.log(`🎨 Geoset ${index} 纹理:`, {
+        textureID,
+        path: textureObj?.Image || replaceableKey,
+        replaceableId: textureObj?.ReplaceableId,
+        replaceableType,  // 显示实际传递给 shader 的值
+        hasTexture: textureObj?.Image 
+          ? this.textures.has(textureObj.Image) 
+          : (replaceableKey ? this.textures.has(replaceableKey) : false),
+        usingDefault: texture === this.defaultTexture,
+        boundTexture: texture === this.defaultTexture ? 'DEFAULT' : 
+                      (hasActualTexture ? actualTexturePath : replaceableKey),
+        totalTextures: this.textures.size,
+        textureKeys: Array.from(this.textures.keys())
       });
     }
+    
+    gl.uniform1i(program.uniformLocations.replaceableType, replaceableType);
 
     // Alpha 测试阈值
     const alphaTest = (layer.FilterMode ?? 1) === 0 ? 0.75 : 0.0;
@@ -406,26 +468,26 @@ export class ModelRenderer {
     // 设置混合模式
     this.setBlendMode(layer.FilterMode ?? 1);
 
-    // 绑定顶点属性
-    if (this.vertexBuffers[index]) {
+    // 绑定顶点属性（只绑定有效的属性）
+    if (this.vertexBuffers[index] && program.attribLocations.vertexPosition >= 0) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers[index]);
       gl.enableVertexAttribArray(program.attribLocations.vertexPosition);
       gl.vertexAttribPointer(program.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
     }
 
-    if (this.normalBuffers[index]) {
+    if (this.normalBuffers[index] && program.attribLocations.normal >= 0) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffers[index]);
       gl.enableVertexAttribArray(program.attribLocations.normal);
       gl.vertexAttribPointer(program.attribLocations.normal, 3, gl.FLOAT, false, 0, 0);
     }
 
-    if (this.texCoordBuffers[index]) {
+    if (this.texCoordBuffers[index] && program.attribLocations.textureCoord >= 0) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffers[index]);
       gl.enableVertexAttribArray(program.attribLocations.textureCoord);
       gl.vertexAttribPointer(program.attribLocations.textureCoord, 2, gl.FLOAT, false, 0, 0);
     }
 
-    if (this.groupBuffers[index]) {
+    if (this.groupBuffers[index] && program.attribLocations.group >= 0) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.groupBuffers[index]);
       gl.enableVertexAttribArray(program.attribLocations.group);
       gl.vertexAttribPointer(program.attribLocations.group, 4, gl.UNSIGNED_SHORT, false, 0, 0);
@@ -435,13 +497,24 @@ export class ModelRenderer {
     if (this.indexBuffers[index]) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffers[index]);
       
-      if (wireframe) {
-        // 线框模式：绘制线条
-        // TODO: 需要创建线框索引缓冲区
-        gl.drawElements(gl.TRIANGLES, geoset.Faces.length, gl.UNSIGNED_SHORT, 0);
-      } else {
-        gl.drawElements(gl.TRIANGLES, geoset.Faces.length, gl.UNSIGNED_SHORT, 0);
+      const triangleCount = geoset.Faces.length;
+      if (triangleCount > 0) {
+        gl.drawElements(gl.TRIANGLES, triangleCount, gl.UNSIGNED_SHORT, 0);
       }
+    }
+
+    // 清理：禁用顶点属性
+    if (program.attribLocations.vertexPosition >= 0) {
+      gl.disableVertexAttribArray(program.attribLocations.vertexPosition);
+    }
+    if (program.attribLocations.normal >= 0) {
+      gl.disableVertexAttribArray(program.attribLocations.normal);
+    }
+    if (program.attribLocations.textureCoord >= 0) {
+      gl.disableVertexAttribArray(program.attribLocations.textureCoord);
+    }
+    if (program.attribLocations.group >= 0) {
+      gl.disableVertexAttribArray(program.attribLocations.group);
     }
   }
 
@@ -449,20 +522,39 @@ export class ModelRenderer {
    * 获取材质层对应的纹理
    */
   private getTextureForLayer(layer: any): WebGLTexture {
-    const textureObj = this.model.Textures[layer.TextureID];
+    const textureID = typeof layer.TextureID === 'number' ? layer.TextureID : 
+                      (layer.TextureID as any)?.Value ?? 0;
+    const textureObj = this.model.Textures[textureID];
     
     if (!textureObj) {
+      console.warn(`⚠️ 纹理对象不存在: textureID=${textureID}`);
       return this.defaultTexture!;
     }
 
-    // 如果是可替换纹理，使用默认纹理（团队颜色等在着色器中处理）
+    // 优先查找真实的纹理图片
+    if (textureObj.Image) {
+      const texture = this.textures.get(textureObj.Image);
+      if (texture) {
+        console.log(`✅ 找到纹理: ${textureObj.Image}`);
+        return texture;
+      } else {
+        console.warn(`⚠️ 纹理未找到: ${textureObj.Image}, 可用键:`, Array.from(this.textures.keys()));
+      }
+    }
+
+    // 如果没有 Image 或找不到,尝试使用可替换纹理
     if (textureObj.ReplaceableId !== 0) {
-      return this.defaultTexture!;
+      const replaceableKey = `Replaceable${textureObj.ReplaceableId}`;
+      const replaceableTexture = this.textures.get(replaceableKey);
+      if (replaceableTexture) {
+        console.log(`✅ 使用替换纹理: ${replaceableKey}`);
+        return replaceableTexture;
+      }
     }
 
-    // 查找已加载的纹理
-    const texture = this.textures.get(textureObj.Image);
-    return texture || this.defaultTexture!;
+    // 都找不到,返回默认纹理
+    console.warn(`⚠️ 使用默认纹理 for textureID=${textureID}`);
+    return this.defaultTexture!;
   }
 
   /**
@@ -474,56 +566,48 @@ export class ModelRenderer {
     switch (filterMode) {
       case 0: // None - 无混合，使用 alpha 测试
         gl.disable(gl.BLEND);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthMask(true);
+        gl.depthMask(true); // 写入深度
         break;
 
       case 1: // Transparent - 透明混合
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthMask(false);
+        gl.depthMask(true); // 改为 true，让透明物体也写入深度
         break;
 
       case 2: // Blend - 混合
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        gl.enable(gl.DEPTH_TEST);
         gl.depthMask(false);
         break;
 
       case 3: // Additive - 加法混合
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-        gl.enable(gl.DEPTH_TEST);
         gl.depthMask(false);
         break;
 
       case 4: // AddAlpha - Alpha 加法
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-        gl.enable(gl.DEPTH_TEST);
         gl.depthMask(false);
         break;
 
       case 5: // Modulate - 调制
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
-        gl.enable(gl.DEPTH_TEST);
         gl.depthMask(false);
         break;
 
       case 6: // Modulate2x - 调制2倍
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.DST_COLOR, gl.SRC_COLOR);
-        gl.enable(gl.DEPTH_TEST);
         gl.depthMask(false);
         break;
 
       default:
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
         break;
     }

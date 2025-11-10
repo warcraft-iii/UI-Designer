@@ -30,10 +30,10 @@ export interface MDXMaterial {
 export interface MDXLayer {
   FilterMode?: number; // 混合模式: 0=None, 1=Transparent, 2=Blend, 3=Additive, 4=AddAlpha, 5=Modulate, 6=Modulate2x
   Shading?: number;
-  TextureID: number; // 纹理索引
+  TextureID?: number | any; // 纹理索引（可能是动画）
   TVertexAnimId?: number;
   CoordId?: number;
-  Alpha?: number;
+  Alpha?: number | any; // 可能是动画
 }
 
 export interface MDXTexture {
