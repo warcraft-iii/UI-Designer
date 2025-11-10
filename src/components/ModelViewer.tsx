@@ -188,6 +188,14 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({
             materials: rustModel.materials?.length || 0,
             bones: rustModel.bones?.length || 0
           });
+          
+          // 详细调试信息
+          console.log('🔍 Rust 解析详情:', {
+            'geosets数组': rustModel.geosets,
+            'textures数组': rustModel.textures,
+            'sequences数组长度': rustModel.sequences?.length,
+            'materials数组长度': rustModel.materials?.length
+          });
         } catch (rustErr) {
           console.error('❌ Rust 解析器错误:', rustErr);
         }
