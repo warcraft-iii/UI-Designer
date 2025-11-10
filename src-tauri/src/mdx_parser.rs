@@ -530,19 +530,26 @@ impl MdxParser {
 
     fn parse_textures(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
+        eprintln!("[parse_textures] start_pos={}, size={}, end_pos={}", start_pos, size, start_pos + size as u64);
         
+        let mut count = 0;
         while self.cursor.position() < start_pos + size as u64 {
             let replaceable_id = self.cursor.read_u32::<LittleEndian>()?;
             let path = self.read_string(256)?;
             let flags = self.cursor.read_u32::<LittleEndian>()?;
+            
+            eprintln!("[parse_textures] #{}: path='{}', replaceable_id={}, flags={}", 
+                count, path, replaceable_id, flags);
             
             model.textures.push(Texture {
                 replaceable_id,
                 path,
                 flags,
             });
+            count += 1;
         }
-
+        
+        eprintln!("[parse_textures] Parsed {} textures", count);
         Ok(())
     }
 
@@ -610,10 +617,14 @@ impl MdxParser {
 
     fn parse_geosets(&mut self, model: &mut MdxModel, size: u32) -> Result<(), ParseError> {
         let start_pos = self.cursor.position();
+        eprintln!("[parse_geosets] start_pos={}, size={}, end_pos={}", start_pos, size, start_pos + size as u64);
 
+        let mut geoset_count = 0;
         while self.cursor.position() < start_pos + size as u64 {
             let geoset_size = self.cursor.read_u32::<LittleEndian>()?;
             let geoset_start = self.cursor.position();
+            
+            eprintln!("[parse_geosets] Geoset #{}: size={}, start={}", geoset_count, geoset_size, geoset_start);
             
             let mut geoset = Geoset {
                 vertices: Vec::new(),
@@ -726,12 +737,18 @@ impl MdxParser {
                 geoset.bounds = BoundingBox { min, max };
             }
 
+            eprintln!("[parse_geosets] Geoset #{}: vertices={}, normals={}, faces={}, uvs_sets={}", 
+                geoset_count, geoset.vertices.len(), geoset.normals.len(), 
+                geoset.faces.len(), geoset.uvs.len());
+
             model.geosets.push(geoset);
+            geoset_count += 1;
             
-            // 纭繚鎸囬拡鍦?geoset 缁撳熬
+            // 确保指针在 geoset 结尾
             self.cursor.seek(SeekFrom::Start(geoset_start + geoset_size as u64))?;
         }
 
+        eprintln!("[parse_geosets] Parsed {} geosets", geoset_count);
         Ok(())
     }
 
