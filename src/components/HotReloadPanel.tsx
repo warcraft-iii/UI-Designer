@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { detectKKWE, launchMapWithKKWE, type KKWEInfo } from '../utils/kkweDetector';
 import { getHotReloadExporter, DEFAULT_HOT_RELOAD_CONFIG, type HotReloadConfig } from '../utils/hotReloadExporter';
 import { useProjectStore } from '../store/projectStore';
+import { war3ProcessManager } from '../utils/war3ProcessManager';
 import './HotReloadPanel.css';
 
 interface HotReloadPanelProps {
@@ -177,6 +178,34 @@ export const HotReloadPanel: React.FC<HotReloadPanelProps> = ({ onClose }) => {
     }
 
     try {
+      // 检查War3进程是否正在运行（使用PID检测）
+      const currentPid = war3ProcessManager.getCurrentPid();
+      if (currentPid) {
+        const isRunning = await war3ProcessManager.isCurrentProcessRunning();
+        if (isRunning) {
+          showMessage('info', '检测到War3.exe正在运行，正在重启...');
+          
+          try {
+            await war3ProcessManager.killCurrentProcess();
+            // 等待进程完全结束
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } catch (error) {
+            const errorMsg = String(error);
+            
+            // 用户取消了UAC
+            if (errorMsg.includes('取消')) {
+              showMessage('info', '已取消关闭War3进程。请手动关闭War3后重试。');
+              return;
+            }
+            
+            // 其他错误：提示用户手动关闭
+            console.warn('[热重载] 关闭War3进程失败:', error);
+            showMessage('error', errorMsg);
+            return;
+          }
+        }
+      }
+
       // 启动前先导出 Lua 文件（强制导出，不受"启用热重载"控制）
       showMessage('info', '正在导出 Lua 文件...');
       await getHotReloadExporter(config).export(project, true);
@@ -193,10 +222,14 @@ export const HotReloadPanel: React.FC<HotReloadPanelProps> = ({ onClose }) => {
       updateConfig({ testMapPath: targetPath });
       console.log('[热重载] 模板地图已更新:', targetPath);
       
-      // 启动游戏
+      // 启动游戏并保存War3.exe的真实PID（等待启动器退出获取）
       showMessage('info', '正在启动 War3...');
-      await launchMapWithKKWE(config.testMapPath, kkweInfo);
-      showMessage('success', 'War3 启动成功！');
+      const war3Pid = await launchMapWithKKWE(targetPath, kkweInfo);
+      console.log('[热重载] YDWEConfig退出码(War3 PID)=', war3Pid);
+      await war3ProcessManager.setProcess(war3Pid);
+      
+      showMessage('success', `War3.exe 启动成功！PID=${war3Pid}`);
+      console.log('[热重载] War3.exe 启动成功, PID=', war3Pid);
     } catch (error) {
       console.error('初始化或启动失败:', error);
       showMessage('error', `操作失败: ${error}`);

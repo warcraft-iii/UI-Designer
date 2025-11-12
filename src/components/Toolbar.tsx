@@ -15,7 +15,8 @@ import { useAlert } from '../hooks/useAlert';
 import { WC3TextureBrowser } from './WC3TextureBrowser';
 import { RaceSwitcher } from './RaceSwitcher';
 import { detectKKWE, launchMapWithKKWE, type KKWEInfo } from '../utils/kkweDetector';
-import { HotReloadExporter } from '../utils/hotReloadExporter';
+import { getHotReloadExporter } from '../utils/hotReloadExporter';
+import { war3ProcessManager } from '../utils/war3ProcessManager';
 import {
   NewFileIcon, OpenFileIcon, SaveIcon,
   UndoIcon, RedoIcon,
@@ -138,9 +139,48 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
     
     try {
       setIsLaunching(true);
-      showAlert({ title: '提示', message: '正在检测 KKWE 环境...', type: 'info' });
+      
+      // 检查是否有War3进程正在运行（使用PID检测）
+      const currentPid = war3ProcessManager.getCurrentPid();
+      if (currentPid) {
+        const isRunning = await war3ProcessManager.isCurrentProcessRunning();
+        console.log('[工具栏] 检查War3进程: PID=', currentPid, '运行=', isRunning);
+        
+        if (isRunning) {
+          console.log('[工具栏] 检测到War3.exe正在运行，正在重启...');
+          // 静默重启，不显示提示
+          
+          try {
+            await war3ProcessManager.killCurrentProcess();
+            // 等待进程完全结束
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } catch (error) {
+            const errorMsg = String(error);
+            
+            // 用户取消了UAC
+            if (errorMsg.includes('取消')) {
+              showAlert({ 
+                title: '已取消', 
+                message: '已取消关闭War3进程。\n请手动关闭War3后重试。', 
+                type: 'info' 
+              });
+              return;
+            }
+            
+            // 其他错误：提示用户手动关闭
+            console.warn('[工具栏] 关闭War3进程失败:', error);
+            showAlert({ 
+              title: '错误', 
+              message: errorMsg, 
+              type: 'danger' 
+            });
+            return;
+          }
+        }
+      }
 
-      // 检测 KKWE
+      // 检测 KKWE (静默检测,不显示提示)
+      console.log('[工具栏] 检测 KKWE 环境...');
       const kkweInfo: KKWEInfo | null = await detectKKWE();
       if (!kkweInfo) {
         showAlert({ 
@@ -164,26 +204,32 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
 
       const config = JSON.parse(hotReloadConfigStr);
       
-      // 导出Lua文件
-      const exporter = new HotReloadExporter(config);
+      // 静默导出Lua文件
+      console.log('[工具栏] 开始导出Lua文件...');
+      const exporter = getHotReloadExporter(config);
       await exporter.export(project, true);
-      console.log('[工具栏] Lua文件导出完成');
+      console.log('[工具栏] ✅ Lua文件导出完成');
 
-      // 每次启动都重新释放模板地图，确保使用最新版本
+      // 静默更新模板地图
+      console.log('[工具栏] 开始更新模板地图...');
       const targetPath = await invoke<string>('extract_template_map', {
         war3Path: kkweInfo.war3Path,
         mapName: 'test.1.27.w3x'
       });
-      console.log('[工具栏] 模板地图已更新:', targetPath);
+      console.log('[工具栏] ✅ 模板地图已更新:', targetPath);
       
       // 更新配置中的测试地图路径
       const updatedConfig = { ...config, testMapPath: targetPath };
       localStorage.setItem('hotReloadConfig', JSON.stringify(updatedConfig));
 
-      // 启动War3
-      await launchMapWithKKWE(targetPath, kkweInfo);
-      // 启动成功，不显示提示（游戏已经启动）
-      console.log('[工具栏] War3 启动成功');
+      // 启动War3并保存进程ID (等待启动器退出获取War3.exe的真实PID)
+      console.log('[工具栏] 开始启动War3...');
+      const war3Pid = await launchMapWithKKWE(targetPath, kkweInfo);
+      console.log('[工具栏] ✅ YDWEConfig退出码(War3 PID)=', war3Pid);
+      await war3ProcessManager.setProcess(war3Pid);
+      
+      console.log('[工具栏] ✅ War3.exe 启动成功, PID=', war3Pid);
+      // 启动成功后不显示提示,让用户专注游戏
     } catch (error) {
       console.error('启动War3失败:', error);
       showAlert({ title: '错误', message: '启动失败: ' + error, type: 'danger' });

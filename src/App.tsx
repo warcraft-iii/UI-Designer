@@ -17,6 +17,7 @@ import { useCommandStore } from './store/commandStore';
 import { useProjectStore } from './store/projectStore';
 import { RemoveFrameCommand, BatchRemoveFrameCommand } from './commands/FrameCommands';
 import { mpqManager } from './utils/mpqManager';
+import { war3ProcessManager } from './utils/war3ProcessManager';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import './App.css';
 
@@ -64,6 +65,19 @@ function AppContent() {
     };
 
     initMPQ();
+  }, []);
+
+  // 初始化 War3 进程管理器 - 恢复上次的进程监听
+  React.useEffect(() => {
+    const initProcessManager = async () => {
+      try {
+        await war3ProcessManager.restoreFromStorage();
+      } catch (error) {
+        console.error('[App] War3进程管理器初始化失败:', error);
+      }
+    };
+
+    initProcessManager();
   }, []);
 
   // 全局删除请求处理函数

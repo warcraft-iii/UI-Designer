@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { ProjectData, FrameData, TableArrayData, CircleArrayData, GuideLine, StylePreset, FrameGroup } from '../types';
 import { createDefaultAnchors, clearPositionCache } from '../utils/anchorUtils';
 import { getHotReloadExporter } from '../utils/hotReloadExporter';
+import { war3ProcessManager } from '../utils/war3ProcessManager';
 
 interface ProjectState {
   project: ProjectData;
@@ -282,11 +283,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       frames: updatedFrames,
       rootFrameIds: newRootFrameIds,
     };
-
-    // 触发热重载导出
-    setTimeout(() => {
-      getHotReloadExporter().exportDebounced(newProject);
-    }, 0);
 
     return {
       project: newProject,
@@ -770,3 +766,48 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     console.log('[ProjectStore] war3skins.txt 已加载，种族切换器应该可见');
   },
 }));
+
+// 全局订阅 project 变化，自动导出到War3
+let previousProject: ProjectData | null = null;
+
+useProjectStore.subscribe((state) => {
+  const currentProject = state.project;
+  
+  // 首次初始化，跳过
+  if (previousProject === null) {
+    previousProject = currentProject;
+    return;
+  }
+  
+  // 检查 project 是否真的发生了变化
+  if (previousProject === currentProject) {
+    return;
+  }
+  
+  previousProject = currentProject;
+  
+  // 异步触发热重载导出（只在War3进程运行时）
+  setTimeout(async () => {
+    const currentPid = war3ProcessManager.getCurrentPid();
+    if (!currentPid) {
+      console.log('[自动导出] 无War3进程PID，跳过自动导出');
+      return;
+    }
+    
+    const isRunning = await war3ProcessManager.isCurrentProcessRunning();
+    if (!isRunning) {
+      console.log('[自动导出] War3进程已退出(PID=', currentPid, ')，跳过自动导出');
+      return;
+    }
+    
+    console.log('[自动导出] 检测到项目变化，War3运行中(PID=', currentPid, ')，触发自动导出...');
+    
+    const hotReloadConfigStr = localStorage.getItem('hotReloadConfig');
+    if (hotReloadConfigStr) {
+      const config = JSON.parse(hotReloadConfigStr);
+      getHotReloadExporter(config).exportDebounced(currentProject);
+    } else {
+      console.log('[自动导出] 未找到热重载配置，跳过自动导出');
+    }
+  }, 0);
+});

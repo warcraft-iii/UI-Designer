@@ -180,16 +180,165 @@ fn get_username() -> Result<String, String> {
 
 /// 使用 KKWE 启动器启动 War3 地图
 #[tauri::command]
-fn launch_kkwe(launcher_path: String, map_path: String) -> Result<(), String> {
+fn launch_kkwe(launcher_path: String, map_path: String) -> Result<u32, String> {
     use std::process::Command;
     
-    let output = Command::new(&launcher_path)
+    let mut child = Command::new(&launcher_path)
         .args(&["-launchwar3", "-loadfile", &map_path])
         .spawn()
         .map_err(|e| format!("启动 KKWE 失败: {}", e))?;
     
-    println!("[KKWE] 进程已启动: PID={}", output.id());
-    Ok(())
+    // 等待启动器退出，其退出码就是War3.exe的PID
+    match child.wait() {
+        Ok(status) => {
+            if let Some(exit_code) = status.code() {
+                Ok(exit_code as u32)
+            } else {
+                Err("启动器进程被信号终止".to_string())
+            }
+        }
+        Err(e) => Err(format!("等待启动器退出失败: {}", e))
+    }
+}
+
+/// 检查进程是否存在
+#[tauri::command]
+fn is_process_running(pid: u32) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        
+        // 使用 tasklist 查询特定PID
+        let output = Command::new("tasklist")
+            .args(&["/FI", &format!("PID eq {}", pid), "/NH", "/FO", "CSV"])
+            .output();
+        
+        if let Ok(output) = output {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            // 检查输出中是否包含PID (CSV格式会包含 "进程名","PID","...")
+            return stdout.contains(&format!("\"{}", pid));
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        // 非Windows平台暂不支持
+    }
+    
+    false
+}
+
+/// 结束指定进程
+#[tauri::command]
+fn kill_process(pid: u32) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        
+        let output = Command::new("taskkill")
+            .args(&["/F", "/PID", &pid.to_string()])
+            .output()
+            .map_err(|e| format!("结束进程失败: {}", e))?;
+        
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(format!("taskkill执行失败: {}", stderr))
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    Err("仅支持 Windows 平台".to_string())
+}
+
+/// 使用管理员权限结束指定进程（通过PowerShell提升权限）
+#[tauri::command]
+fn kill_process_elevated(pid: u32) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        
+        // 构建PowerShell命令：Start-Process -Verb RunAs -Wait -FilePath taskkill -ArgumentList "/F /PID 12345"
+        let ps_command = format!(
+            "Start-Process -Verb RunAs -Wait -WindowStyle Hidden -FilePath taskkill -ArgumentList '/F','/PID','{}'",
+            pid
+        );
+        
+        let output = Command::new("powershell")
+            .args(&["-NoProfile", "-Command", &ps_command])
+            .output()
+            .map_err(|e| format!("PowerShell执行失败: {}", e))?;
+        
+        // PowerShell的Start-Process -Verb RunAs会弹出UAC提示
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            
+            // 检查是否是用户取消了UAC
+            if stderr.contains("canceled") || stderr.contains("取消") {
+                Err("用户取消了权限提升".to_string())
+            } else {
+                Err(format!("管理员权限结束进程失败: {}", stderr))
+            }
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    Err("仅支持 Windows 平台".to_string())
+}
+
+/// 检查War3.exe进程是否正在运行
+#[tauri::command]
+fn is_war3_running() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        
+        let output = Command::new("tasklist")
+            .args(&["/NH", "/FO", "CSV"])
+            .output();
+        
+        if let Ok(output) = output {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            // 检查可能的War3进程名
+            return stdout.to_lowercase().contains("war3.exe") || 
+                   stdout.to_lowercase().contains("warcraft iii.exe") ||
+                   stdout.to_lowercase().contains("w3l.exe");
+        }
+    }
+    
+    false
+}
+
+/// 结束所有War3.exe进程
+#[tauri::command]
+fn kill_war3_processes() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        
+        let output = Command::new("taskkill")
+            .args(&["/F", "/IM", "war3.exe"])
+            .output()
+            .map_err(|e| format!("结束War3进程失败: {}", e))?;
+        
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            // 如果没有找到进程，也算成功
+            if stderr.contains("找不到") || stderr.contains("not found") {
+                Ok(())
+            } else {
+                Err(format!("taskkill执行失败: {}", stderr))
+            }
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    Err("仅支持 Windows 平台".to_string())
 }
 
 /// 复制内置模板地图到War3目录
@@ -206,8 +355,6 @@ fn extract_template_map(_app_handle: tauri::AppHandle, war3_path: String, map_na
     // 嵌入的模板地图数据 (编译时包含)
     const TEMPLATE_MAP_DATA: &[u8] = include_bytes!("../../public/maps/test.1.27.w3x");
     
-    println!("[模板地图] 使用嵌入的地图数据，大小: {} 字节", TEMPLATE_MAP_DATA.len());
-    
     // 目标路径: War3目录/Maps/Test/
     let target_dir = Path::new(&war3_path).join("Maps").join("Test");
     
@@ -221,8 +368,6 @@ fn extract_template_map(_app_handle: tauri::AppHandle, war3_path: String, map_na
     // 写入文件
     fs::write(&target_file, TEMPLATE_MAP_DATA)
         .map_err(|e| format!("写入地图文件失败: {}", e))?;
-    
-    println!("[模板地图] 已释放到: {:?}", target_file);
     
     // 返回目标文件路径
     Ok(target_file.to_string_lossy().to_string())
@@ -249,6 +394,11 @@ pub fn run() {
             parse_mdx_from_file,
             get_username,
             launch_kkwe,
+            is_process_running,
+            kill_process,
+            kill_process_elevated,
+            is_war3_running,
+            kill_war3_processes,
             extract_template_map
         ])
         .run(tauri::generate_context!())
