@@ -164,14 +164,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
       const config = JSON.parse(hotReloadConfigStr);
       
       // 导出Lua文件
-      showAlert({ title: '提示', message: '正在导出 Lua 脚本...', type: 'info' });
       const exporter = new HotReloadExporter(config);
       await exporter.export(project, true);
 
       // 启动War3
-      showAlert({ title: '提示', message: '正在启动 War3...', type: 'info' });
       await launchMapWithKKWE(config.testMapPath, kkweInfo);
-      showAlert({ title: '成功', message: 'War3 启动成功！', type: 'info' });
+      // 启动成功，不显示提示（游戏已经启动）
+      console.log('[工具栏] War3 启动成功');
     } catch (error) {
       console.error('启动War3失败:', error);
       showAlert({ title: '错误', message: '启动失败: ' + error, type: 'danger' });
