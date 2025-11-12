@@ -263,6 +263,23 @@ if japi_loaded and japi and japi.DzCreateFrame then
     API.SetPriority = function(frame, priority)
         return japi.DzFrameSetPriority(frame, priority)
     end
+    
+    -- Model Frame API
+    API.SetModel = function(frame, modelPath, teamColorId)
+        return japi.DzFrameSetModel2(frame, modelPath, teamColorId or 0)
+    end
+    
+    API.SetModelAnimation = function(frame, animName)
+        return japi.DzFrameSetModelAnimation(frame, animName)
+    end
+    
+    API.SetModelCameraSource = function(frame, x, y, z)
+        return japi.DzFrameSetModelCameraSource(frame, x, y, z)
+    end
+    
+    API.SetModelCameraTarget = function(frame, x, y, z)
+        return japi.DzFrameSetModelCameraTarget(frame, x, y, z)
+    end
 
 elseif BlzCreateFrame then
     -- War3 Reforged (原生 API)
@@ -315,6 +332,25 @@ elseif BlzCreateFrame then
     API.GetHeight = BlzFrameGetHeight
     API.GetWidth = BlzFrameGetWidth
     API.SetPriority = BlzFrameSetLevel
+    
+    -- Model Frame API
+    API.SetModel = function(frame, modelPath, teamColorId)
+        return BlzFrameSetModel(frame, modelPath, teamColorId or 0)
+    end
+    
+    API.SetModelAnimation = function(frame, animName)
+        -- Reforged 可能需要不同的实现
+        -- 此处先提供占位实现
+        print("|cffffcc00[UI Designer]|r SetModelAnimation 在 Reforged 中可能需要额外支持")
+    end
+    
+    API.SetModelCameraSource = function(frame, x, y, z)
+        print("|cffffcc00[UI Designer]|r SetModelCameraSource 在 Reforged 中可能需要额外支持")
+    end
+    
+    API.SetModelCameraTarget = function(frame, x, y, z)
+        print("|cffffcc00[UI Designer]|r SetModelCameraTarget 在 Reforged 中可能需要额外支持")
+    end
     
 else
     -- 无 UI API 支持
@@ -510,8 +546,18 @@ _G.UI_Designer_ParseColor = ParseColor`;
     
     // 设置 Backdrop 背景
     if (frame.backdropBackground) {
-      lines.push(`${indent}    -- Backdrop 背景`);
+      lines.push(`${indent}    -- Backdrop 背景纹理`);
+      lines.push(`${indent}    -- 注意: Backdrop的边框、平铺等高级属性需要通过FDF模板定义`);
+      lines.push(`${indent}    -- 当前仅支持设置背景纹理`);
       lines.push(`${indent}    API.SetTexture(frame, "${this.escapeLuaString(frame.backdropBackground)}", 0)`);
+      lines.push('');
+    }
+    
+    // Backdrop边框纹理(如果支持的话)
+    if (frame.backdropEdgeFile) {
+      lines.push(`${indent}    -- Backdrop 边框纹理`);
+      lines.push(`${indent}    -- 警告: 边框可能需要FDF模板支持`);
+      lines.push(`${indent}    API.SetTexture(frame, "${this.escapeLuaString(frame.backdropEdgeFile)}", 1)`);
       lines.push('');
     }
     
@@ -538,6 +584,36 @@ _G.UI_Designer_ParseColor = ParseColor`;
     if (frame.alpha !== undefined && frame.alpha !== 255 && frame.alpha !== 1) {
       const alphaValue = frame.alpha > 1 ? Math.round(frame.alpha) : Math.round(frame.alpha * 255);
       lines.push(`${indent}    API.SetAlpha(frame, ${alphaValue})`);
+      lines.push('');
+    }
+    
+    // MODEL Frame: 设置3D模型
+    if (frame.type === 22 && frame.backgroundArt) { // 22 = MODEL
+      lines.push(`${indent}    -- Model 设置`);
+      lines.push(`${indent}    API.SetModel(frame, "${this.escapeLuaString(frame.backgroundArt)}", 0)`);
+      
+      // 相机设置 - 将角度转换为相机位置
+      if (frame.cameraYaw !== undefined || frame.cameraPitch !== undefined || frame.cameraDistance !== undefined) {
+        const distance = frame.cameraDistance || 300;
+        const yaw = frame.cameraYaw || 0;
+        const pitch = frame.cameraPitch || 0;
+        
+        // 球坐标转笛卡尔坐标
+        const x = distance * Math.cos(pitch) * Math.sin(yaw);
+        const y = -distance * Math.cos(pitch) * Math.cos(yaw);
+        const z = distance * Math.sin(pitch);
+        
+        lines.push(`${indent}    API.SetModelCameraSource(frame, ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
+        lines.push(`${indent}    API.SetModelCameraTarget(frame, 0, 0, 0)`);
+      }
+      
+      lines.push('');
+    }
+    
+    // SPRITE Frame: 设置sprite模型
+    if (frame.type === 21 && frame.backgroundArt) { // 21 = SPRITE
+      lines.push(`${indent}    -- Sprite 模型`);
+      lines.push(`${indent}    API.SetModel(frame, "${this.escapeLuaString(frame.backgroundArt)}", 0)`);
       lines.push('');
     }
     
