@@ -1,4 +1,5 @@
 import React from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useProjectStore } from '../store/projectStore';
 import { useCommandStore } from '../store/commandStore';
 import { AlignCommand, DistributeCommand, EqualSpacingCommand } from '../commands/AlignCommands';
@@ -166,9 +167,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({ currentFilePath, setCurrentFil
       // 导出Lua文件
       const exporter = new HotReloadExporter(config);
       await exporter.export(project, true);
+      console.log('[工具栏] Lua文件导出完成');
+
+      // 每次启动都重新释放模板地图，确保使用最新版本
+      const targetPath = await invoke<string>('extract_template_map', {
+        war3Path: kkweInfo.war3Path,
+        mapName: 'test.1.27.w3x'
+      });
+      console.log('[工具栏] 模板地图已更新:', targetPath);
+      
+      // 更新配置中的测试地图路径
+      const updatedConfig = { ...config, testMapPath: targetPath };
+      localStorage.setItem('hotReloadConfig', JSON.stringify(updatedConfig));
 
       // 启动War3
-      await launchMapWithKKWE(config.testMapPath, kkweInfo);
+      await launchMapWithKKWE(targetPath, kkweInfo);
       // 启动成功，不显示提示（游戏已经启动）
       console.log('[工具栏] War3 启动成功');
     } catch (error) {
