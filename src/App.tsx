@@ -6,6 +6,7 @@ import { ProjectTree } from './components/ProjectTree';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StylePresetPanel } from './components/StylePresetPanel';
 import { FrameGroupPanel } from './components/FrameGroupPanel';
+import { HotReloadPanel } from './components/HotReloadPanel';
 import { SidePanel } from './components/SidePanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { DebugPanel } from './components/DebugPanel';
@@ -25,6 +26,7 @@ function AppContent() {
   const [showPropertiesPanel, setShowPropertiesPanel] = React.useState(true);
   const [showStylePresetPanel, setShowStylePresetPanel] = React.useState(false);
   const [showFrameGroupPanel, setShowFrameGroupPanel] = React.useState(false);
+  const [showHotReloadPanel, setShowHotReloadPanel] = React.useState(false);
   const [showDebugPanel, setShowDebugPanel] = React.useState(true); // 状态栏默认显示
   const [deleteConfirm, setDeleteConfirm] = React.useState<{ targets: string[] } | null>(null);
   const [showNewProjectConfirm, setShowNewProjectConfirm] = React.useState(false);
@@ -172,6 +174,8 @@ function AppContent() {
         setShowStylePresetPanel={setShowStylePresetPanel}
         showFrameGroupPanel={showFrameGroupPanel}
         setShowFrameGroupPanel={setShowFrameGroupPanel}
+        showHotReloadPanel={showHotReloadPanel}
+        setShowHotReloadPanel={setShowHotReloadPanel}
         showDebugPanel={showDebugPanel}
         setShowDebugPanel={setShowDebugPanel}
         onDeleteRequest={handleDeleteRequest}
@@ -183,6 +187,7 @@ function AppContent() {
         {showPropertiesPanel && <PropertiesPanel onClose={() => setShowPropertiesPanel(false)} />}
         {showStylePresetPanel && <StylePresetPanel onClose={() => setShowStylePresetPanel(false)} />}
         {showFrameGroupPanel && <FrameGroupPanel onClose={() => setShowFrameGroupPanel(false)} />}
+        {showHotReloadPanel && <HotReloadPanel />}
         <SidePanel />
       </div>
 

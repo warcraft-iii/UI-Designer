@@ -35,6 +35,8 @@ interface MenuBarProps {
   setShowStylePresetPanel?: (show: boolean) => void;
   showFrameGroupPanel?: boolean;
   setShowFrameGroupPanel?: (show: boolean) => void;
+  showHotReloadPanel?: boolean;
+  setShowHotReloadPanel?: (show: boolean) => void;
   showDebugPanel?: boolean;
   setShowDebugPanel?: (show: boolean) => void;
   onDeleteRequest?: (targets: string[]) => void;
@@ -64,6 +66,8 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   setShowStylePresetPanel = () => {},
   showFrameGroupPanel = false,
   setShowFrameGroupPanel = () => {},
+  showHotReloadPanel = false,
+  setShowHotReloadPanel = () => {},
   showDebugPanel = false,
   setShowDebugPanel = () => {},
   onDeleteRequest
@@ -650,6 +654,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         label: showFrameGroupPanel ? '✓ 分组管理' : '分组管理',
         shortcut: 'Ctrl+4',
         action: () => setShowFrameGroupPanel(!showFrameGroupPanel)
+      },
+      {
+        label: showHotReloadPanel ? '✓ 热重载面板' : '热重载面板',
+        shortcut: 'Ctrl+5',
+        action: () => setShowHotReloadPanel(!showHotReloadPanel)
       },
       { separator: true },
       {

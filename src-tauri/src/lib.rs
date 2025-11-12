@@ -170,6 +170,28 @@ fn parse_mdx_from_file(file_path: String) -> Result<String, String> {
     parse_mdx_file(mdx_data)
 }
 
+/// 获取当前用户名 (用于 KKWE 路径检测)
+#[tauri::command]
+fn get_username() -> Result<String, String> {
+    std::env::var("USERNAME")
+        .or_else(|_| std::env::var("USER"))
+        .map_err(|e| format!("无法获取用户名: {}", e))
+}
+
+/// 使用 KKWE 启动器启动 War3 地图
+#[tauri::command]
+fn launch_kkwe(launcher_path: String, map_path: String) -> Result<(), String> {
+    use std::process::Command;
+    
+    let output = Command::new(&launcher_path)
+        .args(&["-launchwar3", "-loadfile", &map_path])
+        .spawn()
+        .map_err(|e| format!("启动 KKWE 失败: {}", e))?;
+    
+    println!("[KKWE] 进程已启动: PID={}", output.id());
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -188,7 +210,9 @@ pub fn run() {
             decode_blp_mipmap_level,
             parse_mdx_file,
             parse_mdx_from_mpq,
-            parse_mdx_from_file
+            parse_mdx_from_file,
+            get_username,
+            launch_kkwe
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

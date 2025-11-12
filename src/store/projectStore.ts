@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ProjectData, FrameData, TableArrayData, CircleArrayData, GuideLine, StylePreset, FrameGroup } from '../types';
 import { createDefaultAnchors, clearPositionCache } from '../utils/anchorUtils';
+import { getHotReloadExporter } from '../utils/hotReloadExporter';
 
 interface ProjectState {
   project: ProjectData;
@@ -276,12 +277,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
     }
 
+    const newProject = {
+      ...state.project,
+      frames: updatedFrames,
+      rootFrameIds: newRootFrameIds,
+    };
+
+    // 触发热重载导出
+    setTimeout(() => {
+      getHotReloadExporter().exportDebounced(newProject);
+    }, 0);
+
     return {
-      project: {
-        ...state.project,
-        frames: updatedFrames,
-        rootFrameIds: newRootFrameIds,
-      },
+      project: newProject,
     };
   }),
 
