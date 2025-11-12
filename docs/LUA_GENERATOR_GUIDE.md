@@ -644,6 +644,20 @@ end
 3. **启动游戏测试** → UI自动加载
 4. **修改UI** → 游戏中输入 `-reload` → 即时刷新
 
+### **默认文件位置**
+
+**War3 1.27 + KKWE:**
+```
+{War3安装目录}\UI-Designer\ui_generated.lua  ← Lua文件
+{War3安装目录}\Maps\Test\test.w3x           ← 测试地图
+```
+
+**War3 Reforged:**
+```
+C:\Users\{用户名}\Documents\Warcraft III\CustomMapData\UI-Designer\ui_generated.lua  ← Lua文件
+C:\Users\{用户名}\Documents\Warcraft III\Maps\Test\test.w3x                        ← 测试地图
+```
+
 ---
 
 ## ⚠️ 注意事项
@@ -745,6 +759,20 @@ export async function launchMapWithKKWE(mapPath: string, kkweInfo: KKWEInfo): Pr
   console.log(`[KKWE] 启动地图: ${normalizedMapPath}`);
 }
 ```
+
+### **默认路径配置**
+
+系统会根据War3安装路径自动选择合适的默认路径：
+
+**War3 1.27 (KKWE):**
+- Lua 输出: `{War3安装目录}\UI-Designer\ui_generated.lua`
+- 测试地图: `{War3安装目录}\Maps\Test\test.w3x`
+
+**War3 Reforged (1.31+):**
+- Lua 输出: `C:\Users\{用户名}\Documents\Warcraft III\CustomMapData\UI-Designer\ui_generated.lua`
+- 测试地图: `C:\Users\{用户名}\Documents\Warcraft III\Maps\Test\test.w3x`
+
+> 💡 系统会自动检测War3安装路径（从编辑器设置中读取），如果已设置War3路径，则使用1.27路径；否则使用Reforged路径。
 
 ### **Rust 端实现 (Tauri)**
 

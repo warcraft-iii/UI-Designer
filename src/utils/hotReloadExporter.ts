@@ -13,13 +13,41 @@ export interface HotReloadConfig {
   debounceMs: number;        // 防抖延迟
 }
 
-export const DEFAULT_HOT_RELOAD_CONFIG: HotReloadConfig = {
-  enabled: false,
-  outputPath: 'D:\\War3Maps\\UI-Designer\\ui_generated.lua',
-  testMapPath: 'D:\\War3Maps\\test.w3x',
-  autoLaunch: false,
-  debounceMs: 500
-};
+/**
+ * 获取默认的热重载配置
+ * 根据War3路径和用户文档路径生成默认路径
+ */
+function getDefaultHotReloadConfig(): HotReloadConfig {
+  // 尝试从localStorage获取War3路径
+  const war3Path = localStorage.getItem('war3_install_path');
+  
+  let outputPath: string;
+  let testMapPath: string;
+  
+  if (war3Path) {
+    // War3 1.27 路径 (从设置中获取的War3安装目录)
+    // 规范化路径，确保使用反斜杠
+    const normalizedPath = war3Path.replace(/\//g, '\\').replace(/\\+$/, '');
+    outputPath = `${normalizedPath}\\UI-Designer\\ui_generated.lua`;
+    testMapPath = `${normalizedPath}\\Maps\\Test\\test.w3x`;
+  } else {
+    // War3 Reforged 路径 (默认文档目录)
+    // 尝试从环境变量获取用户名，否则使用默认值
+    const username = localStorage.getItem('system_username') || '81468';
+    outputPath = `C:\\Users\\${username}\\Documents\\Warcraft III\\CustomMapData\\UI-Designer\\ui_generated.lua`;
+    testMapPath = `C:\\Users\\${username}\\Documents\\Warcraft III\\Maps\\Test\\test.w3x`;
+  }
+  
+  return {
+    enabled: false,
+    outputPath,
+    testMapPath,
+    autoLaunch: false,
+    debounceMs: 500
+  };
+}
+
+export const DEFAULT_HOT_RELOAD_CONFIG: HotReloadConfig = getDefaultHotReloadConfig();
 
 export class HotReloadExporter {
   private config: HotReloadConfig;

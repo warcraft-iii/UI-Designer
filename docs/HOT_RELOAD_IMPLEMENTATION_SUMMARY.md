@@ -54,9 +54,15 @@
 1. 打开编辑器
 2. 视图菜单 → 热重载面板 (或按 `Ctrl+5`)
 3. 检测 KKWE 状态 (未安装则下载: http://www.kkwai.com/)
-4. 设置 Lua 输出路径 (建议: `D:\War3Maps\UI-Designer\ui_generated.lua`)
-5. 设置测试地图路径 (例如: `D:\War3Maps\test.w3x`)
+4. 设置 Lua 输出路径：
+   - **War3 1.27**: `{War3安装目录}\UI-Designer\ui_generated.lua`
+   - **Reforged**: `C:\Users\{用户名}\Documents\Warcraft III\CustomMapData\UI-Designer\ui_generated.lua`
+5. 设置测试地图路径：
+   - **War3 1.27**: `{War3安装目录}\Maps\Test\test.w3x`
+   - **Reforged**: `C:\Users\{用户名}\Documents\Warcraft III\Maps\Test\test.w3x`
 6. 启用热重载开关
+
+> 💡 **提示**: 系统会根据编辑器中设置的War3路径自动选择默认路径。
 
 ### **第二步：地图触发器初始化**
 在地图的初始化触发器中添加以下代码：
@@ -141,11 +147,25 @@ C:\Users\{用户名}\AppData\Local\KKWE\
     └── YDWEConfig.exe         # 启动器
 ```
 
-### **War3 地图结构**
+### **War3 1.27 文件结构**
 ```
-War3安装目录\Maps\
-└── UI-Designer\
-    └── ui_generated.lua       # 生成的 Lua 文件
+{War3安装目录}\
+├── UI-Designer\
+│   └── ui_generated.lua       # 生成的 Lua 文件
+└── Maps\
+    └── Test\
+        └── test.w3x           # 测试地图
+```
+
+### **War3 Reforged 文件结构**
+```
+C:\Users\{用户名}\Documents\Warcraft III\
+├── CustomMapData\
+│   └── UI-Designer\
+│       └── ui_generated.lua   # 生成的 Lua 文件
+└── Maps\
+    └── Test\
+        └── test.w3x           # 测试地图
 ```
 
 ### **测试地图触发器**
@@ -159,13 +179,15 @@ test.w3x
 
 ## 🛠️ 配置选项
 
-| 选项 | 说明 | 默认值 |
-|------|------|--------|
-| **启用热重载** | 是否自动导出 Lua | `false` |
-| **Lua 输出路径** | 生成的 Lua 文件位置 | `D:\War3Maps\UI-Designer\ui_generated.lua` |
-| **测试地图路径** | War3 地图文件 | `D:\War3Maps\test.w3x` |
-| **自动启动游戏** | 导出后自动启动 War3 | `false` |
-| **防抖延迟** | 导出防抖时间 (ms) | `500` |
+| 选项 | 说明 | 默认值 (War3 1.27) | 默认值 (Reforged) |
+|------|------|-------------------|-------------------|
+| **启用热重载** | 是否自动导出 Lua | `false` | `false` |
+| **Lua 输出路径** | 生成的 Lua 文件位置 | `{War3}\UI-Designer\ui_generated.lua` | `Documents\Warcraft III\CustomMapData\UI-Designer\ui_generated.lua` |
+| **测试地图路径** | War3 地图文件 | `{War3}\Maps\Test\test.w3x` | `Documents\Warcraft III\Maps\Test\test.w3x` |
+| **自动启动游戏** | 导出后自动启动 War3 | `false` | `false` |
+| **防抖延迟** | 导出防抖时间 (ms) | `500` | `500` |
+
+> 💡 **自动路径选择**: 系统根据编辑器设置的War3安装路径自动选择1.27或Reforged路径。
 
 ---
 

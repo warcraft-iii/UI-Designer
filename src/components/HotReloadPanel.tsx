@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import { detectKKWE, launchMapWithKKWE, type KKWEInfo } from '../utils/kkweDetector';
 import { getHotReloadExporter, DEFAULT_HOT_RELOAD_CONFIG, type HotReloadConfig } from '../utils/hotReloadExporter';
 import './HotReloadPanel.css';
@@ -12,8 +13,19 @@ export const HotReloadPanel: React.FC = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null);
   
-  // 初始化：检测 KKWE
+  // 初始化：检测 KKWE 并设置默认路径
   useEffect(() => {
+    // 获取并保存用户名
+    const initUsername = async () => {
+      try {
+        const username = await invoke<string>('get_username');
+        localStorage.setItem('system_username', username);
+      } catch (error) {
+        console.warn('无法获取系统用户名:', error);
+      }
+    };
+    
+    initUsername();
     checkKKWE();
     
     // 从本地存储加载配置
@@ -26,6 +38,9 @@ export const HotReloadPanel: React.FC = () => {
       } catch (e) {
         console.error('加载热重载配置失败:', e);
       }
+    } else {
+      // 使用默认配置（已经根据War3路径动态生成）
+      setConfig(DEFAULT_HOT_RELOAD_CONFIG);
     }
   }, []);
   
@@ -185,12 +200,15 @@ export const HotReloadPanel: React.FC = () => {
       <div className="config-section">
         <label>
           <strong>Lua 输出路径:</strong>
+          <small style={{ display: 'block', color: '#888', marginBottom: '4px' }}>
+            💡 自动根据War3路径选择：1.27使用War3目录，Reforged使用文档目录
+          </small>
           <div className="input-with-button">
             <input
               type="text"
               value={config.outputPath}
               onChange={(e) => updateConfig({ outputPath: e.target.value })}
-              placeholder="D:\War3Maps\UI-Designer\ui_generated.lua"
+              placeholder="例如: D:\War3\UI-Designer\ui_generated.lua"
             />
             <button onClick={selectOutputPath}>浏览...</button>
           </div>
@@ -206,7 +224,7 @@ export const HotReloadPanel: React.FC = () => {
               type="text"
               value={config.testMapPath}
               onChange={(e) => updateConfig({ testMapPath: e.target.value })}
-              placeholder="D:\War3Maps\test.w3x"
+              placeholder="例如: D:\War3\Maps\Test\test.w3x"
             />
             <button onClick={selectTestMap}>浏览...</button>
           </div>
@@ -258,7 +276,10 @@ export const HotReloadPanel: React.FC = () => {
         <h4>💡 使用说明:</h4>
         <ol>
           <li>确保已安装 KKWE (凯凯我编)</li>
-          <li>设置 Lua 输出路径 (建议: War3安装目录/Maps/UI-Designer/)</li>
+          <li>设置 Lua 输出路径：
+            <br/>War3 1.27: <code>{'{War3目录}'}\UI-Designer\ui_generated.lua</code>
+            <br/>Reforged: <code>Documents\Warcraft III\CustomMapData\UI-Designer\ui_generated.lua</code>
+          </li>
           <li>设置测试地图路径</li>
           <li>启用热重载后，编辑器会自动导出 Lua 文件</li>
           <li>在地图触发器中添加初始化代码 (参考文档)</li>
