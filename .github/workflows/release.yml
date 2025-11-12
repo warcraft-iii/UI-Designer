@@ -71,7 +71,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'WC3 UI Designer ${{ github.ref_name }}'
+          releaseName: '${{ github.ref_name }}'
           releaseBody: |
             ## 更新内容
             
