@@ -833,7 +833,7 @@ end`;
    * 生成重载函数
    */
   private generateReloadFunction(): string {
-    const uiGeneratedPath = 'UI-Designer\\\\ui_generated.lua';
+    const uiGeneratedPath = '.\\\UI-Designer\\\\ui_generated.lua';
     
     return `--===========================================================================
 -- 重载 UI
@@ -846,7 +846,10 @@ local function ReloadUI()
     
     -- 重新加载 UI 内容脚本
     local success, err = pcall(function()
-        require("${uiGeneratedPath}")
+        local f = io.open([[${uiGeneratedPath}]], 'r')
+        local content = f:read('*a')
+        f:close()
+        load(content)()
     end)
     
     if success then
@@ -866,7 +869,7 @@ end`;
    * 生成初始化函数
    */
   private generateInitFunction(): string {
-    const uiGeneratedPath = 'UI-Designer\\\\ui_generated';
+    const uiGeneratedPath = '.\\\\UI-Designer\\\\ui_generated.lua';
     
     return `--===========================================================================
 -- 初始化
@@ -884,7 +887,10 @@ print("|cff00ff00[UI Designer]|r 命令: -reload 或 -rl  刷新UI")
 
 -- 首次加载 UI
 local success, err = pcall(function()
-    require("${uiGeneratedPath}")
+    local f = io.open([[${uiGeneratedPath}]], 'r')
+    local content = f:read('*a')
+    f:close()
+    load(content)()
 end)
 
 if success then
