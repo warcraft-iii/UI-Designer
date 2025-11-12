@@ -280,6 +280,37 @@ if japi_loaded and japi and japi.DzCreateFrame then
     API.SetModelCameraTarget = function(frame, x, y, z)
         return japi.DzFrameSetModelCameraTarget(frame, x, y, z)
     end
+    
+    -- 文本和字体 API
+    API.SetTextAlignment = function(frame, align)
+        return japi.DzFrameSetTextAlignment(frame, align)
+    end
+    
+    API.SetVertexColor = function(frame, color)
+        return japi.DzFrameSetVertexColor(frame, color)
+    end
+    
+    -- Slider API
+    API.SetMinMaxValue = function(frame, minValue, maxValue)
+        return japi.DzFrameSetMinMaxValue(frame, minValue, maxValue)
+    end
+    
+    API.SetStepValue = function(frame, step)
+        return japi.DzFrameSetStepValue(frame, step)
+    end
+    
+    API.SetValue = function(frame, value)
+        return japi.DzFrameSetValue(frame, value)
+    end
+    
+    API.GetValue = function(frame)
+        return japi.DzFrameGetValue(frame)
+    end
+    
+    -- 纹理坐标 API
+    API.SetTexCoord = function(frame, left, top, right, bottom)
+        return japi.DzFrameSetTexCoord(frame, left, top, right, bottom)
+    end
 
 elseif BlzCreateFrame then
     -- War3 Reforged (原生 API)
@@ -350,6 +381,32 @@ elseif BlzCreateFrame then
     
     API.SetModelCameraTarget = function(frame, x, y, z)
         print("|cffffcc00[UI Designer]|r SetModelCameraTarget 在 Reforged 中可能需要额外支持")
+    end
+    
+    -- 文本和字体 API
+    API.SetTextAlignment = BlzFrameSetTextAlignment
+    API.SetVertexColor = BlzFrameSetVertexColor
+    
+    -- Slider API
+    API.SetMinMaxValue = function(frame, minValue, maxValue)
+        BlzFrameSetMinMaxValue(frame, minValue, maxValue)
+    end
+    
+    API.SetStepValue = function(frame, step)
+        BlzFrameSetStepValue(frame, step)
+    end
+    
+    API.SetValue = function(frame, value)
+        BlzFrameSetValue(frame, value)
+    end
+    
+    API.GetValue = function(frame)
+        return BlzFrameGetValue(frame)
+    end
+    
+    -- 纹理坐标 API (Reforged可能不支持)
+    API.SetTexCoord = function(frame, left, top, right, bottom)
+        print("|cffffcc00[UI Designer]|r SetTexCoord 在 Reforged 中可能不支持")
     end
     
 else
@@ -572,9 +629,39 @@ _G.UI_Designer_ParseColor = ParseColor`;
         lines.push(`${indent}    if color then API.SetTextColor(frame, color) end`);
       }
       
+      // 字体颜色 (RGBA)
+      if (frame.fontColor) {
+        const [r, g, b, a] = frame.fontColor;
+        const color = `API.GetColor(${Math.round(a * 255)}, ${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+        lines.push(`${indent}    API.SetTextColor(frame, ${color})`);
+      }
+      
       // 文本缩放
       if (frame.textScale && frame.textScale !== 1) {
         lines.push(`${indent}    API.SetScale(frame, ${frame.textScale.toFixed(3)})`);
+      }
+      
+      // 文本对齐
+      if (frame.fontJustificationH) {
+        const alignMap: Record<string, number> = {
+          'JUSTIFYLEFT': 0,
+          'JUSTIFYCENTER': 1,
+          'JUSTIFYRIGHT': 2
+        };
+        const align = alignMap[frame.fontJustificationH] ?? 0;
+        lines.push(`${indent}    API.SetTextAlignment(frame, ${align})`);
+      }
+      
+      // 字体设置
+      if (frame.font && frame.fontSize) {
+        const flags = frame.fontFlags?.join('|') || '0';
+        lines.push(`${indent}    API.SetFont(frame, "${this.escapeLuaString(frame.font)}", ${(frame.fontSize / 1000).toFixed(3)}, ${flags})`);
+      }
+      
+      // 文本长度限制
+      if (frame.maxChars || frame.textLength) {
+        const limit = frame.maxChars || frame.textLength || 0;
+        lines.push(`${indent}    API.SetTextSizeLimit(frame, ${limit})`);
       }
       
       lines.push('');
@@ -614,6 +701,38 @@ _G.UI_Designer_ParseColor = ParseColor`;
     if (frame.type === 21 && frame.backgroundArt) { // 21 = SPRITE
       lines.push(`${indent}    -- Sprite 模型`);
       lines.push(`${indent}    API.SetModel(frame, "${this.escapeLuaString(frame.backgroundArt)}", 0)`);
+      lines.push('');
+    }
+    
+    // SLIDER Frame: 设置滑动条属性
+    if (frame.type === 16) { // 16 = SLIDER
+      if (frame.minValue !== undefined && frame.maxValue !== undefined) {
+        lines.push(`${indent}    -- Slider 范围`);
+        lines.push(`${indent}    API.SetMinMaxValue(frame, ${frame.minValue}, ${frame.maxValue})`);
+      }
+      if (frame.stepSize !== undefined) {
+        lines.push(`${indent}    API.SetStepValue(frame, ${frame.stepSize})`);
+      }
+      if (frame.sliderInitialValue !== undefined) {
+        lines.push(`${indent}    API.SetValue(frame, ${frame.sliderInitialValue})`);
+      }
+      lines.push('');
+    }
+    
+    // 纹理坐标设置
+    if (frame.texCoord) {
+      lines.push(`${indent}    -- 纹理坐标`);
+      const [left, right, top, bottom] = frame.texCoord;
+      lines.push(`${indent}    API.SetTexCoord(frame, ${left}, ${top}, ${right}, ${bottom})`);
+      lines.push('');
+    }
+    
+    // 顶点颜色设置
+    if (frame.fontColor && (frame.type === 2 || frame.type === 24)) { // BACKDROP 或 SIMPLESTATUSBAR
+      const [r, g, b, a] = frame.fontColor;
+      const color = `API.GetColor(${Math.round(a * 255)}, ${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+      lines.push(`${indent}    -- 顶点颜色`);
+      lines.push(`${indent}    API.SetVertexColor(frame, ${color})`);
       lines.push('');
     }
     
